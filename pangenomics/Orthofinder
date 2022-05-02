@@ -1,0 +1,23 @@
+
+# Genome annotation
+
+workdir=/tsl/scratch/hulin/pseudomonas/annotation
+gendir=/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18
+
+
+for GENOME in $gendir/*.fna ; do
+     GENOME_FILE=$(basename $GENOME)
+     GENOME_SHORT=$(echo $GENOME_FILE | sed s/.fna//g | cut -f1 -d ".")
+     echo $GENOME_SHORT
+
+    Jobs=$(squeue | grep 'sub_prok' | wc -l)
+    while [ $Jobs -gt 50 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_prok' | wc -l)
+    done
+
+sbatch /tsl/scratch/hulin/scripts/sub_prokka.sh  $GENOME $GENOME_SHORT
+
+done
