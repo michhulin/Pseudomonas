@@ -63,6 +63,29 @@ paste "$file_short".rm2 "$file_short".ar > "$file_short".srm
 # check all commands were completed
 for file in ../*pdb ; do file_short=$(basename $file | sed s/".pdb"//g) ; ls "$file_short"*srm | wc -l >> t; done
 
+### In R generate distance matrix 
+
+rmsd <- read.table("/Users/hulin/Documents/R tables/tir_rmsd.txt", row.names=,1)
+rmsd[,5]=rmsd[,3]/rmsd[,4]
+d<-as.dist(xtabs(rmsd[, 5] ~ rmsd[, 2] + rmsd[, 1]))
+write.table(as.matrix(d),"tir_rmsd.txt")
+d<-hclust(d)
+distances<-cophenetic(d)
+dend <- as.dendrogram(d)
+pdf(file = "/Users/hulin/Documents/tir_RMSD.pdf",width=12,height=6)
+plot(dend)
+dev.off()
+
+# Then generate fitch phylip phylogeny 
+
+source phylip-3.69
+# Need to add number of species to first line
+# Need to remove first line of OG names
+# /tsl/scratch/hulin/pseudomonas/analysis/tm-align/frtmalign/alphafold/TIR_complete/pockets/out/fitch/54/red/withcyclase/new
+# Follow commands on screen. Jumble order of input sequences 100 times 
+
+fitch
+# seed 3
 
 
 
