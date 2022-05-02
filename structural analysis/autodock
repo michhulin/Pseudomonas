@@ -31,6 +31,12 @@ done
 # In /tsl/scratch/hulin/pseudomonas/analysis/autodock/alphafold/TIRHMM
 # Prepare TIR protein structures for docking in predicted active sites based on position that aligned to SARM1 E642
 
+# Convert pdb to pdbqt
+for file in *.pdb ; do
+file_name=$(basename $file | sed s/".pdb"//g )
+singularity exec --overlay ../../ad_overlay.img ../../autodock.img prepare_receptor -r $file -o "$file_name".pdbqt
+
+
 # prepare config file with p2rank pocket prediction
 source p2rank-2.3.1
 for file in *pdb ;
