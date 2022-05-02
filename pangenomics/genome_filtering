@@ -1,0 +1,190 @@
+
+#####################################
+Downloaded genomes belonging to P. syringae (TaxID) 
+/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/
+#####################################
+
+#####################################
+Ran FastANI to obtain average nucleotide identity pairwise scores
+In /scratch/hulin/pseudomonas/analysis/fastani
+#####################################
+
+# First split into manageable number of genomes for run in batches
+
+/tsl/scratch/hulin/scripts/split_ani_database.sh input 100 ref_genomes/
+
+# run fastani
+for partition in /tsl/scratch/hulin/pseudomonas/analysis/fastani/ref_genomes/* ; do
+par_file=$(basename $partition)
+echo $par_file
+Jobs=$(squeue | grep 'sub_FAST' | wc -l)
+while [ $Jobs -gt 50 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'sub_FAST' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/sub_fastani.sh input $partition out/$par_file
+done
+
+
+# Processing output from FastANI
+
+cat * > fastani
+sed s/"\/tsl\/data\/sequences\/bacteria\/pseudomonas\/ncbi-genomes-2020-11-18\/"//g fastani | sed s/".fna"//g > fastani2
+cut -f1,2,3 fastani2 > fastani3
+
+cut -f1 -d "." fastani3 > 1
+cut -f2 fastani3 | cut -f1 -d "." > 2
+cut -f3 fastani3 > 3
+paste 1 2 3 > fastani_results
+
+# In R convert to distance matrix
+
+fastani <- read.table("/Users/hulin/Documents/Bioinformatics/fastani_results.txt")
+fastani[,4]<-100-fastani[,3]
+fastani[,5]<-fastani[,4]/100
+d<-as.dist(xtabs(fastani[, 5] ~ fastani[, 2] + fastani[, 1]))
+d<-hclust(d, method = "average")
+distances<-cophenetic(d)
+dend <- as.dendrogram(d)
+
+groups<-cutree(d, h=0.19)
+write.table(groups, file="g19.txt")
+groups<-cutree(d, h=0.15)
+write.table(groups, file="g15.txt")
+groups<-cutree(d, h=0.2)
+write.table(groups, file="g2.txt")
+groups<-cutree(d, h=0.1)
+write.table(groups, file="g1.txt")
+groups<-cutree(d, h=0.05)
+write.table(groups, file="g0.5.txt")
+groups<-cutree(d, h=0.04)
+write.table(groups, file="g0.4.txt")
+groups<-cutree(d, h=0.03)
+write.table(groups, file="g0.3.txt")
+groups<-cutree(d, h=0.02)
+write.table(groups, file="g0.2.txt")
+groups<-cutree(d, h=0.01)
+write.table(groups, file="g0.1.txt")
+groups<-cutree(d, h=0.005)
+write.table(groups, file="g0.005.txt")
+groups<-cutree(d, h=0.001)
+write.table(groups, file="g0.001.txt")
+groups<-cutree(d, h=0.0005)
+write.table(groups, file="g0.0005.txt")
+groups<-cutree(d, h=0.0001)
+write.table(groups, file="g0.0001.txt")
+
+# Dendrogram plot
+pdf(file = "/Users/hulin/Documents/Bioinformatics/ani_dendrogram.pdf",width=15,height=7)
+par(cex=0.1,cex.axis=15)
+par(mar = c(5, 20, 0.05, 0.05), cex=0.3)
+plot(dend)
+abline(h=0.01, col="red", lwd=0.5)
+abline(h=0.02, col="blue",lwd=0.5)
+abline(h=0.03, col="green",lwd=0.5)
+abline(h=0.04, col="orange",lwd=0.5)
+abline(h=0.05, col="purple",lwd=0.5)
+abline(h=0.005, col="darkgreen",lwd=0.5)
+abline(h=0.001, col="lightblue",lwd=0.5)
+abline(h=0.0005, col="pink",lwd=0.5)
+abline(h=0.0001, col="lightgreen",lwd=0.5)
+axis(side = 2, col = "#F38630",
+     labels = FALSE, lwd = 1,las = 2)
+dev.off()
+
+
+#####################################
+# Take strains0.0005 data from R (groups >99.95% identical) and make 806 directories in fastani filtering directory to copy each genome into its own group.
+# Will then copy only the one with the least contigs into a new folder
+# Analysis in /tsl/scratch/hulin/pseudomonas/analysis/fastani/filtering
+#####################################
+
+while read line; do
+strain=$(echo $line | cut -f1 -d " " )
+group=$(echo $line |cut -f2 -d " " )
+echo $strain
+echo $group
+cp /tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/"$strain"* ./"$group"
+done < g0.0005.txt
+
+# paste together results from strain.info and strains0.0005 into file called strain.information.
+
+wc -l /tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/*.info > strain_info
+sed -i s/"\/tsl\/data\/sequences\/bacteria\/pseudomonas\/ncbi-genomes-2020-11-18\/"/g strain_info
+sed -i s/".info"//g strain_info
+
+
+paste g0.0005.txt strain_info > strain_information
+sed -i -e "s/[[:space:]]\+/ /g" strain_information
+cut -f1,2,3 -d " " strain_information
+sed s/" "/"\t"/g strain_information2 > strain_information
+
+
+awk -F "\t" '{print>$2}' strain_information
+
+for file in * ; do
+ref=$(sort -nk3 $file | head -n +1 | cut -f1)
+echo $ref
+cp /tsl/scratch/hulin/pseudomonas/analysis/fastani/filtering/"$file"/"$ref"*fna ./out
+done
+
+for file in * ; do
+ref=$(sort -nk3 $file | head -n +1 | cut -f1)
+echo $ref >> reference_strains
+done
+
+# Manually changed some of these e.g. keep DC3000 rather than other Pto strains with lower contig number
+# Need to keep in mind for those groups with mostly complete genomes this could be biasing against plasmids. However, unlikely due to most being draft genomes
+
+rm GCA_009800185.1_ASM980018v1_genomic.fna
+rm GCA_004376015.1_ASM437601v1_genomic.fna
+
+cp ../../1/GCA_000007805.1_ASM780v1_genomic.fna .
+cp ../../248/GCA_002024925.1_ASM202492v1_genomic.fna .
+
+Create file with those genomes with 1000 or more contigs and remove those from the output file
+
+for file in $(cat toremove) ; do
+rm ./out/$file*
+done
+
+# Run quast to get N50 information
+source quast-4.0
+source python-2.7.10
+quast.py *.fna
+
+
+# Manually filter out genomes by N50 (remove <40,000 bp )
+# CheckM to check for completeness and contamination
+
+for file in *.fna ; do
+    file_short=$(basename $file | sed s/".fna"//g | cut -f1 -d ".")
+    echo $file_short
+#    mkdir -p ./checkm/"$file_short"/out
+#    cp $file ./checkm/"$file_short"
+    Jobs=$(squeue | grep 'sub_chec' | wc -l)
+    while [ $Jobs -gt 30 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_chec' | wc -l)
+    done
+sbatch /tsl/scratch/hulin/scripts/subcheckM.sh ./checkm/"$file_short" ./checkm/"$file_short"/out
+
+
+# Run report
+
+for file in *fna ; do
+file_short=$(basename $file | sed s/".fna"//g | cut -f1 -d ".")
+echo $file_short
+ checkm qa ./checkm/"$file_short"/out/lineage.ms ./checkm/"$file_short"/out > ./checkm/"$file_short"/out/report
+
+done
+
+# Manually remove incomplete/contaminated genomes (keep >95% complete and <5% contamination)
+
+# Final strains (final no. 531 )
+
+
