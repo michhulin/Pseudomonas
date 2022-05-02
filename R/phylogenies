@@ -1,0 +1,264 @@
+library(phangorn)
+library(ggnewscale)
+library(ggtree)
+
+tree <- read.tree("/Users/hulin/Documents/Bioinformatics/combined2.phy.contree.tre")
+mydata_t3ss <- read.csv("/Users/hulin/Documents/Bioinformatics/T3SS_2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+mydata_t3e <- read.csv("/Users/hulin/Documents/R tables/effector_orthogroups.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+phylogroups<-read.csv("/Users/hulin/Documents/R tables/phylogroups2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+tirno <- read.csv("/Users/hulin/Documents/R tables/TIR_no.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+tirno[,1]<-as.numeric(tirno[,1])
+cpg <- read.csv("/Users/hulin/Documents/R tables/cpg2.csv", stringsAsFactors=FALSE, colClasses='character')
+
+nudno <- read.csv("/Users/hulin/Documents/R tables/nudix_no.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nudno[,1]<-as.numeric(nudno[,1])
+artno <- read.csv("/Users/hulin/Documents/R tables/art_no.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+artno[,1]<-as.numeric(artno[,1])
+pdeno <- read.csv("/Users/hulin/Documents/R tables/pde_no.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+pdeno[,1]<-as.numeric(pdeno[,1])
+nhno <- read.csv("/Users/hulin/Documents/R tables/nh_no.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nhno[,1]<-as.numeric(nhno[,1])
+sirno <- read.csv("/Users/hulin/Documents/R tables/sir_no.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+sirno[,1]<-as.numeric(sirno[,1])
+
+tirno <- read.csv("/Users/hulin/Documents/R tables/tir_no2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+tirno[,1]<-as.numeric(tirno[,1])
+nudno <- read.csv("/Users/hulin/Documents/R tables/nud_no2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nudno[,1]<-as.numeric(nudno[,1])
+artno <- read.csv("/Users/hulin/Documents/R tables/art_no2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+artno[,1]<-as.numeric(artno[,1])
+pdeno <- read.csv("/Users/hulin/Documents/R tables/pde_no2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+pdeno[,1]<-as.numeric(pdeno[,1])
+nhno <- read.csv("/Users/hulin/Documents/R tables/nh_no2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nhno[,1]<-as.numeric(nhno[,1])
+sirno <- read.csv("/Users/hulin/Documents/R tables/sir_no2.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+sirno[,1]<-as.numeric(sirno[,1])
+
+
+tire <- read.csv("/Users/hulin/Documents/R tables/tir_eff.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nude <- read.csv("/Users/hulin/Documents/R tables/nud_eff.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+arte <- read.csv("/Users/hulin/Documents/R tables/art_eff.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+pdee <- read.csv("/Users/hulin/Documents/R tables/pde_eff.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nhe <- read.csv("/Users/hulin/Documents/R tables/nh_eff.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+
+tire1 <- read.csv("/Users/hulin/Documents/R tables/tir_eff3.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nude1 <- read.csv("/Users/hulin/Documents/R tables/nud_eff3.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+arte1 <- read.csv("/Users/hulin/Documents/R tables/art_eff3.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+nhe1 <- read.csv("/Users/hulin/Documents/R tables/nh_eff3.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+pde1 <- read.csv("/Users/hulin/Documents/R tables/pde_eff3.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+
+t3e<-mydata_t3e[c(69)]
+t3e[,1]<-as.numeric(t3e[,1])
+
+ph1<-phylogroups[c(1)]
+ph2<-phylogroups[c(2)]
+ph3<-phylogroups[c(3)]
+ph4<-phylogroups[c(4)]
+
+p1<-c("000007805","000145745","000145865","000145885","000177475","000177495","000245455","000344335","000344475","000344535","000416465","000416545","000416805","000452625","000658965","000765305","000935725","000935765","001293835","001293855","001294305","001400855","001401135","001401385","001401405","001467365","001497455","001497495","001497595","001518465","001518695","001910495","001913235","002003545","002024285","002024925","002111785","002111805","002111835","002174875","002174905","002174975","002174995","002175005","002175225","002261495","002699885","002750435","002750495","002762615","002763655","002890475","002890485","002905695","002905795","002906035","002906135","002916295","002916305","002917235","002966555","003665415","003698905","003698945","003699505","003699555","003699635","003700055","003700105","003700345","003700765","003700835","003700975","003701115","003701175","003701365","003702935","003703315","004376005","004376045","004919565","009903055","014646595","900107345","900235805","900235835","900235855","900235905","900289095","900591215","900598875","900600355")
+p2<-c("000012205","000145685","000145945","000163275","000164015","000187045","000187065","000275945","000732035","000934645","000935695","001006445","001293725","001293765","001293845","001293975","001293985","001294025","001294035","001294065","001294105","001294115","001294185","001294275","001400115","001400605","001400875","001401095","001401285","001467105","001467115","001535735","001535785","001535805","001535815","001535835","001535915","001537985","001538055","001538085","001538145","001538155","001538205","001538245","002068135","002115545","002269785","002269885","002270015","002699945","002736925","002905685","002905755","002905875","003412855","003412865","003412905","003412915","003413075","003413325","003413345","003413425","003416255","003416585","003699045","003699215","003699605","003699855","003700095","003700295","003700335","003700405","003700445","003700505","003700615","003701015","003701185","003701335","003701475","003701515","003701775","003701975","003702085","003702205","003702255","003702295","003702925","003703035","003703085","003703175","008502015","013911125","014652995","014653015","014653035","014855475","900235815","900235885","900289125","900289135")
+p3<-c("000012245","000145925","000452465","000452525","000452565","000988485","001270465","001466875","001466945","001535725","001535855","001535945","002318665","002318725","002318815","002611615","002736945","002905815","002906015","002916275","002917155","002917195","002939285","003412505","003412595","003412655","003412695","003412715","003412735","003412765","003412805","003412845","003412935","003701885","003702425","004124675","900235825","900235865")
+p4<-c("000282735","000302795","000302815","000331385","000334055","000412165","000452445","000452605","000452805","000507185","000738515","000935775","000972155","000972175","000972195","000988395","001401335","001467285","001482725","001623415","001675375","001675415","002318825","002318875","002699845","002770765","002905975","002916225","002916255","002916335","002916375","003047185","003205935","003205965","003412515","003412645","003412685","003412775","003412785","003413265","003698965","003698995","003699005","003699035","003699285","003699325","003699335","003699595","003699875","003700015","003700675","003701455","003702385","004124735","004124865","009898345","009898365","009898815","900113535","900113625","900115275","900585685","900588285")
+p5<-c("000333995","001281365","001293665","001466845","001535905","002318735","002318805","002318895","002699965","002917175","003699535","003699835","003700545","003700575","003701675","004103795","004124785","009898305","009898725","014493645","014524645","900105295")
+p6<-c("000145845","001293575","001293775","003699105","003699905","003699915","003700065","900100365","900114665")
+p7<-c("000156995","000452645","000452765","001275725","001275735","001293935","001400345","001400695","001400915","001401235","003415915","003415945","003415985","003416235","003416345","003416355","003416445","003699275","003699655","003699755","003699785","003699955","003700475","003700905","003701545","003701555","003701755","003701785","003702895","003703115","003703265","009734285","011765175")
+p8<-c("000177515","900586015","900586155","900589295","900599035")
+p9<-c("000251185","900108595")
+p10<-c("000452485","000452505","000834695","001642795","001716855","002406485","005233675","009765495","014838925","014839005","014841315","900184295","900576625","900580965","900581055","900581095","900581115","900581665","900582095","900582345","900582395","900582455","900583065","900583135","900584795","900585175","900585355","900585425","900585495","900585675","900585725","900585775","900585785","900585835","900585935","900585945","900586005","900586165","900587125","900587135","900587685","900587715","900587825","900587985","900588045","900588125","900588205","900588245","900588395","900588565","900588695","900588725","900588765","900588975","900589015","900589045","900589255","900589795","900589805","900589885","900589925","900590075","900590155","900590175","900590195","900590215","900590295","900590335","900590355","900590545","900590565","900590715","900590785","900590855","900590875","900591005","900591025","900591055","900591175","900598765","900598845","900598895","900598955","900599095","900599175","900599395","900599485","900599865","900600025","900600045","900600395","900600445","900601425","900601785","900602105")
+p11<-c("000346225")
+p12<-c("001466965","001466975")
+p13<-c("000452705","000452785")
+p14<-c("000452745","000452825")
+p15<-c("003701285","900600635","900602545")
+p16<-c("000517305","003701435","015471325","015471365")
+p17<-c("000737235")
+p18<-c("000737245")
+p19<-c("001238485")
+p20<-c("001400835","003701315","003703055","003703145","003703245","003703295","008692855")
+p21<-c("001698815")
+p22<-c("002157375")
+p23<-c("002158995")
+p24<-c("002723575","014204055")
+p25<-c("003415775","003416105","003416215","003699995","015471265","015471285","015471305","015471345")
+p26<-c("003700275")
+p27<-c("003702045","013522975")
+p28<-c("014841295","014841345","014842615","900583105","900589395")
+p29<-c("015471385","015471405")
+p30<-c("900143095","900589175")
+p31<-c("900573885")
+p32<-c("900586845")
+p33<-c("900580595","900589535")
+p34<-c("900589655","900589765","900596015")
+p35<-c("900582625")
+p36<-c("900585705","900585815")
+p37<-c("900585905")
+p38<-c("900601905")
+p39<-c("900602065")
+
+p_outer<-c("900588975", "900573885")
+
+p1<-c("000007805","000145745","000145865","000145885","000177475","000177495","000245455","000344335","000344475","000344535","000416465","000416545","000416805","000452625","000658965","000765305","000935725","000935765","001293835","001293855","001294305","001400855","001401135","001401385","001401405","001467365","001497455","001497495","001497595","001518465","001518695","001913235","002003545","002024285","002024925","002111785","002111805","002111835","002174875","002174905","002174975","002174995","002175005","002175225","002261495","002699885","002762615","002763655","002890475","002890485","002905695","002905795","002906035","002906135","002916295","002916305","002917235","002966555","003665415","003698905","003698945","003699505","003699555","003699635","003700055","003700105","003700345","003700765","003700835","003700975","003701115","003701175","003701365","003702935","003703315","004376005","004376045","004919565","009903055","014646595","900107345","900235805","900235835","900235855","900235905","900289095","900591215","900598875","900600355")
+
+getMRCA(tree,p1)
+getMRCA(tree,p2)
+getMRCA(tree,p3)
+getMRCA(tree,p4)
+getMRCA(tree,p5)
+getMRCA(tree,p6)
+getMRCA(tree,p7)
+getMRCA(tree,p8)
+getMRCA(tree,p9)
+getMRCA(tree,p10)
+getMRCA(tree,p12)
+getMRCA(tree,p13)
+getMRCA(tree,p14)
+getMRCA(tree,p15)
+getMRCA(tree,p16)
+getMRCA(tree,p20)
+getMRCA(tree,p24)
+getMRCA(tree,p25)
+getMRCA(tree,p27)
+getMRCA(tree,p28)
+getMRCA(tree,p29)
+getMRCA(tree,p30)
+getMRCA(tree,p33)
+getMRCA(tree,p34)
+getMRCA(tree,p36)
+getMRCA(tree,p_outer)
+
+
+
+# Adding in root
+outgroup <- match(c("900573885","900582625"),tree$tip.label)
+t<-root(tree,outgroup, node=NULL, resolve.root=TRUE)
+
+
+# Phylogroup info tree
+q<-ggtree(tree, layout="circular")
+d <- q$data
+d <- d[!d$isTip,]
+d$label <- as.numeric(d$label)
+# Get inner nodes subset
+nodelist <- c(530:550,788:789,881:884)
+
+
+q2 <- q +  geom_text2(data=d, aes(label=label, subset=node %in% nodelist),size=2,hjust=-0.2)
+q3 <- q2 + geom_tiplab(aes(angle=angle), align=TRUE, size=0.5, color="black", hjust=-0.05) + scale_color_manual(values=c("black", "orange", "deepskyblue", "pink", "darkred", "salmon", "darkmagenta", "darkblue", "grey", "forestgreen", "green","brown1","black")) + geom_hilight(node=531, fill="darkgreen", alpha=0.2)
+q4 <- gheatmap(q3, ph1, width=0.05, font.size=0.5 , color = "white",  offset=0.05) + scale_fill_manual(values=c(
+"brown1","palevioletred4","firebrick1","darkgreen","salmon","turquoise2","deeppink2","goldenrod2","cadetblue","dodgerblue","magenta3","red4","wheat","lightsalmon2","navajowhite2","steelblue4","hotpink","darkorange4","purple1","hotpink2","cornsilk4","chartreuse1","cyan2","deepskyblue","springgreen4","orange","blue1","olivedrab2","orchid","lightseagreen","orchid1","purple","black","seagreen1","chocolate3","orangered","darkblue","pink","darkolivegreen4","cyan","azure3","darkblue","rosybrown1","burlywood2","lightblue1","darksalmon","lightgoldenrodyellow","lavenderblush4","darkorchid4","lightyellow3","pink1","skyblue2","tomato4","lightpink4","dodgerblue1","indianred3","lemonchiffon3","royalblue4","gainsboro","salmon3","lightblue","magenta4","yellow3","cornflowerblue","plum1","lightblue3","darkgoldenrod","green4","peru"))
+
+q5 <- q4 + new_scale_fill()
+q6 <- gheatmap(q5, ph2, width=0.05, font.size=0.5 , color = "white",  offset=0.1) + scale_fill_manual(values=c(
+"blue","deeppink2","chartreuse","maroon","lightsalmon","tan1","purple2","orangered4","darkkhaki","goldenrod2","orange","skyblue4","cyan1","olivedrab1","darkgoldenrod1","pink2","purple2","orangered","lemonchiffon2","blue4","plum2","yellow","tomato","violet","plum3","lightblue1","lavenderblush4","mistyrose","tomato1","dodgerblue3","chocolate","mediumpurple4","orange1","forestgreen","bisque2","blue3","coral3","hotpink3","saddlebrown","violetred3","deeppink1","lightseagreen","hotpink1","khaki4"))
+
+q7 <- q6 + new_scale_fill()
+q8 <- gheatmap(q7, ph3, width=0.05, font.size=0.5 , color = "white",  offset=0.15) + scale_fill_manual(values=c(
+"cadetblue1","orange1","cadetblue4","deeppink4","palegreen2","pink","wheat2","firebrick3","cyan2","darkgreen","lightsteelblue3","hotpink3","palegreen","orchid"))
+
+q9 <- q8 + new_scale_fill()
+q10 <- gheatmap(q9, ph4, width=0.05, font.size=0.5 , color = "white",  offset=0.2) + scale_fill_manual(values=c("cornflowerblue","darkgreen"))
+
+pdf(file = "/Users/hulin/Documents/Bioinformatics/phylogroups.pdf",width=15,height=10)
+q10+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=2)
+
+dev.off()
+
+
+
+# Plotting trees
+tree4 <- groupClade(t, .node=c(789,675,549,586,649,883,895,670,893,892,782))
+
+q<-ggtree(tree4, aes(color=group) , layout="circular")
+d <- q$data
+d <- d[!d$isTip,]
+d$label <- as.numeric(d$label)
+# Get inner nodes subset
+nodelist <- c(530:550,788:789,881:884)
+
+
+# T3SS trees
+
+qa <- q +  geom_text2(data=d, aes(label=label, subset=node %in% nodelist),size=2,hjust=-0.2)
+q2 <- qa %<+% cpg + geom_tiplab(aes(color=g15, angle=angle), align=TRUE, size=0.5,hjust=-0.05)
+q3 <- q2  + scale_color_manual(values=c("black", "brown1", "dodgerblue1", "hotpink2", "orange", "springgreen4", "seagreen1", "darkblue", "pink", "darkgreen", "salmon","wheat","red")) + geom_hilight(node=531, fill="darkgreen", alpha=0.2)
+q4 <- gheatmap(q3, mydata_t3ss, width=0.03, font.size=0.5 , color = "white",  offset=0.03) + scale_fill_manual(values=c("white","grey"))
+q5 <- q4 + new_scale_fill()
+q6 <- gheatmap(q5, t3e, width=0.03, font.size=0.5 , color = "white",  offset=0.05) + scale_fill_gradient(low="white",high="blue")
+pdf(file = "/Users/hulin/Documents/Bioinformatics/t3e_tree3.pdf",width=7.2,height=10)
+q5+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=2)
+dev.off()
+
+# TIR trees
+q2 <- q +  geom_text2(data=d, aes(label=label, subset=node %in% nodelist),size=2,hjust=-0.2)
+
+q3 <- q2  + scale_color_manual(values=c("black", "brown1", "dodgerblue1", "hotpink2", "orange", "springgreen4", "seagreen1", "darkblue", "pink", "darkgreen", "salmon","wheat","red")) + geom_hilight(node=531, fill="darkgreen", alpha=0.2)
+qa <-  q3 + new_scale_colour()
+qb <- qa %<+% cpg + geom_tiplab(aes(color=g15, angle=angle), align=TRUE, size=0.5,hjust=-0.05) + scale_color_manual(values=c("black","red"))
+
+q4 <- gheatmap(qb, tirno, width=0.05, font.size=0.5 , color = "white",  offset=0.03) + scale_fill_gradient2(low="white",mid="paleturquoise3",high="darkgreen", midpoint = 12)
+q5 <- q4 + new_scale_fill()
+q6 <- gheatmap(q5, artno, width=0.05, font.size=0.5 , color = "white",  offset=0.07) + scale_fill_gradient2(low="white",mid="pink",high="darkred", midpoint = 39)
+q7 <- q6 + new_scale_fill()
+q8 <- gheatmap(q7, sirno, width=0.05, font.size=0.5 , color = "white",  offset=0.11) + scale_fill_gradient2(low="white",mid="white",high="sienna4")
+q9 <- q8 + new_scale_fill()
+q10 <- gheatmap(q9, nhno, width=0.05, font.size=0.5 , color = "white",  offset=0.15) + scale_fill_gradient2(low="white",mid="wheat",high="darkgoldenrod4",midpoint = 3 )
+q11 <- q10 + new_scale_fill()
+q12 <- gheatmap(q11, nudno, width=0.05, font.size=0.5 , color = "white",  offset=0.19) + scale_fill_gradient2(low="white",mid="lightblue",high="darkblue", midpoint = 48)
+q13 <- q12 + new_scale_fill()
+q14 <- gheatmap(q13, pdeno, width=0.05, font.size=0.5 , color = "white",  offset=0.23) + scale_fill_gradient2(low="white",mid="lavender",high="purple4", midpoint = 80)
+pdf(file = "/Users/hulin/Documents/nadase_tree3.pdf",width=13,height=10)
+q14+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=2)
+dev.off()
+
+# effector trees
+q2 <- q +  geom_text2(data=d, aes(label=label, subset=node %in% nodelist),size=2,hjust=-0.2)
+
+q3 <- q2  + scale_color_manual(values=c("black", "brown1", "dodgerblue1", "hotpink2", "orange", "springgreen4", "seagreen1", "darkblue", "pink", "darkgreen", "salmon","wheat","red"))
+qa <-  q3 + new_scale_colour()
+qb <- qa %<+% cpg + geom_tiplab(aes(color=g15, angle=angle), align=TRUE, size=0.5,hjust=-0.05) + scale_color_manual(values=c("black","red"))
+
+q4 <- gheatmap(qb, mydata_t3ss, width=0.05, font.size=0.5 , color = "white",  offset=0.03) + scale_fill_manual(values=c("white","darkgreen"))
+q5 <- q4 + new_scale_fill()
+q6 <- gheatmap(q5, t3e, width=0.05, font.size=0.5 , color = "white",  offset=0.05) + scale_fill_gradient(low="white",high="blue")
+q7 <- q6 + new_scale_fill()
+q8 <- gheatmap(q7, tire, width=0.1, font.size=0.5 , color = "grey",  offset=0.12) + scale_fill_manual(values=c("white", "cadetblue1","cadetblue4", "lightskyblue3","midnightblue","darkseagreen4","darkslategray"))
+q9 <- q8 + new_scale_fill()
+q10 <- gheatmap(q9, arte, width=0.21, font.size=0.5 , color = "grey",  offset=0.22) + scale_fill_manual(values=c("white","lightpink","red4","violet","violetred","tomato","tomato4","violet","palevioletred2","red4",   "mediumorchid1", "mediumorchid4","lightpink2","indianred1","indianred4","plum1","plum4","pink","pink3","red"))
+
+
+q11 <- q10 + new_scale_fill()
+q12 <- gheatmap(q11, nhe, width=0.025, font.size=0.5 , color = "grey",  offset=0.36) + scale_fill_manual(values=c("white","goldenrod1","goldenrod4"))
+q13 <- q12 + new_scale_fill()
+q14 <- gheatmap(q13, nude, width=0.025, font.size=0.5 , color = "grey",  offset=0.41) + scale_fill_manual(values=c("white","cornflowerblue","blue"))
+q15 <- q14 + new_scale_fill()
+q16 <- gheatmap(q15, pde, width=0.05, font.size=0.5 , color = "grey",  offset=0.45) + scale_fill_manual(values=c("white","lightslateblue","mediumpurple1","mediumpurple4","mediumvioletred","magenta4"))
+pdf(file = "/Users/hulin/Documents/Bioinformatics/eff_tree.pdf",width=7.2,height=10)
+q16+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=2)
+dev.off()
+
+# effector trees labelled as known then different colours for novel effectors and removed count
+
+
+q2 <- q +  geom_text2(data=d, aes(label=label, subset=node %in% nodelist),size=2,hjust=-0.2)
+
+q3 <- q2  + scale_color_manual(values=c("black", "brown1", "dodgerblue1", "hotpink2", "orange", "springgreen4", "seagreen1", "darkblue", "pink", "darkgreen", "salmon","wheat","red")) + geom_hilight(node=531, fill="darkgreen", alpha=0.2)
+qa <-  q3 + new_scale_colour()
+qb <- qa %<+% cpg + geom_tiplab(aes(color=g15, angle=angle), align=TRUE, size=0.5,hjust=-0.05) + scale_color_manual(values=c("black","red"))
+
+q4 <- gheatmap(qb, mydata_t3ss, width=0.05, font.size=0.5 , color = "white",  offset=0.03) + scale_fill_manual(values=c("white","darkgreen"))
+q5 <- q4 + new_scale_fill()
+q6 <- gheatmap(q5, t3e, width=0.03, font.size=0.5 , color = "white",  offset=0.05) + scale_fill_gradient2(low="white",high="blue")
+q7 <- q6 + new_scale_fill()
+q8 <- gheatmap(q7, tire1, width=0.075, font.size=0.5 , color = "grey",  offset=0.12) + scale_fill_manual(values=c("white", "gray88","cadetblue","gray88","midnightblue","darkseagreen4"))
+q9 <- q8 + new_scale_fill()
+q10 <- gheatmap(q9, arte1, width=0.2, font.size=0.5 , color = "grey",  offset=0.22) + scale_fill_manual(values=c("white","gray88","palevioletred2","gray88","red4","brown1"))
+
+q11 <- q10 + new_scale_fill()
+q12 <- gheatmap(q11, nhe1, width=0.025, font.size=0.5 , color = "grey",  offset=0.36) + scale_fill_manual(values=c("white","gray88","goldenrod1"))
+q13 <- q12 + new_scale_fill()
+q14 <- gheatmap(q13, nude1, width=0.025, font.size=0.5 , color = "grey",  offset=0.41) + scale_fill_manual(values=c("white","gray88","cornflowerblue"))
+q15 <- q14 + new_scale_fill()
+q16 <- gheatmap(q15, pde1, width=0.025, font.size=0.5 , color = "grey",  offset=0.45) + scale_fill_manual(values=c("white","gray88","mediumpurple1"))
+pdf(file = "/Users/hulin/Documents/Bioinformatics/eff_tree_simple5.pdf",width=17,height=15)
+q16+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=2)
+dev.off()
