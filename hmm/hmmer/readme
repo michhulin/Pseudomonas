@@ -1,0 +1,236 @@
+# TIRs
+
+# Generate fasta alignment of hmm seed alignment from pfam
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf01582_seed.fa
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf08937_seed.fa
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf10137_seed.fa
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf18567_seed.fa
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf13676_seed.fa
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/hmm/orthogroups/TIR
+
+for protein in /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/all*fas ; do
+echo $protein
+file_name=$(basename $protein | sed s/".fas"//g)
+echo $file_name
+    Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    while [ $Jobs -gt 200 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    done
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf13676_seed.fa.hmm $protein  $workdir/out/"$file_name"_pf13676.out
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf01582_seed.fa.hmm $protein  $workdir/out/"$file_name"_pf01582.out
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf08937_seed.fa.hmm $protein  $workdir/out/"$file_name"_pf08937.out
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf10137_seed.fa.hmm $protein $workdir/out/"$file_name"_pf10137.out
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf18567_seed.fa.hmm $protein $workdir/out/"$file_name"_pf18567.out
+
+
+# nudix
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/hmm/orthogroups/NUDIX
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf00293_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf03559_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf09296_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf13869_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf14443_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf14815_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf15916_seed.fasta
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh pf16705_seed.fasta
+
+for protein in /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/all*fas ; do
+echo $protein
+file_name=$(basename $protein | sed s/".fas"//g)
+echo $file_name
+    Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    while [ $Jobs -gt 200 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    done
+
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf00293_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_pf00293.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf03559_seed.fasta.hmm $protein  $workdir/out/"$file_name"_pf03559.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf09296_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_pf09296.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf13869_seed.fasta.hmm  $protein $workdir/out/"$file_name"_pf13869.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf14443_seed.fasta.hmm $protein $workdir/out/"$file_name"_pf14443.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf14815_seed.fasta.hmm $protein $workdir/out/"$file_name"_pf14815.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf15916_seed.fasta.hmm $protein $workdir/out/"$file_name"_pf15916.out
+    sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/pf16705_seed.fasta.hmm $protein $workdir/out/"$file_name"_pf16705.out
+
+
+  # ART
+  
+
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF02267_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF00644_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF01129_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF01375_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF01885_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF02027_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF02267_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF02917_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF03496_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF03747_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF06108_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF07461_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF08808_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF09009_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF09143_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF09156_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF09475_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF10386_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF12120_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF13151_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF14021_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF14487_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF15633_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF15634_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF18648_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF18760_seed.fasta
+  sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF19048_seed.fasta
+
+  workdir=/tsl/scratch/hulin/pseudomonas/analysis/hmm/orthogroups/ART/
+
+  for protein in /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/all*fas ; do
+  echo $protein
+  file_name=$(basename $protein | sed s/".fas"//g)
+  echo $file_name
+      Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+      while [ $Jobs -gt 200 ]
+      do
+          srun sleep 10
+          printf "."
+          Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+      done
+
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF02267_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF02267.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF00644_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF00644.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF01129_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF01129.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF01375_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF01375.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF01885_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF01885.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF02027_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF02027.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF02267_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF02267.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF02917_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF02917.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF03496_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF03496.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF03747_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF03747.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF06108_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF06108.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF07461_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF07461.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF08808_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF08808.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF09009_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF09009.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF09143_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF09143.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF09156_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF09156.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF09475_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF09475.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF10386_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF10386.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF12120_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF12120.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF13151_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF13151.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF14021_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF14021.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF14487_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF14487.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF15633_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF15633.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF15634_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF18648.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF18648_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF18648.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF18760_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF18760.out
+      sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh $workdir/PF19048_seed.fasta.hmm  $protein  $workdir/out/"$file_name"_PF19048.out
+      
+# PDE
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF01663.fa
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF00233.fa
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF00149_seed.fasta
+
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/hmm/orthogroups/PDE/
+
+
+for protein in /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/all*fas ; do
+echo $protein
+file_name=$(basename $protein | sed s/".fas"//g)
+echo $file_name
+    Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    while [ $Jobs -gt 200 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    done
+    
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh PF01663.fa.hmm  $protein ./out/"$file_name"_PF01663_out
+#sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh PF00233.fa.hmm  $protein ./out/"$file_name"_PF00233_out
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh PF00149_seed.fasta.hmm  $protein ./out/"$file_name"_PF00149_out
+
+# SIR2
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF02146.fa
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/hmm/orthogroups/SIR2/
+
+for protein in /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/all*fas ; do
+echo $protein
+file_name=$(basename $protein | sed s/".fas"//g)
+echo $file_name
+    Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    while [ $Jobs -gt 200 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    done
+    
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh PF02146.fa.hmm  $protein ./out/"$file_name"_PF02146_out
+
+
+# NH
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmmbuild.sh PF01156.fa
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/hmm/orthogroups/NH/
+
+for protein in /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/all*fas ; do
+echo $protein
+file_name=$(basename $protein | sed s/".fas"//g)
+echo $file_name
+    Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    while [ $Jobs -gt 200 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_hmm' | wc -l)
+    done
+
+sbatch /tsl/scratch/hulin/scripts/sub_hmm_noE.sh PF01156.fa.hmm $protein ./out/"$file_name"_PF01156_out
+
+
+# Get orthogroups that had hits 
+
+cat * > all
+grep "OG" all > all2
+tr -s " " "\t" < all2 > all3
+python /tsl/scratch/hulin/scripts/extract_fullhit.py all3  all_out # for R hist
+python /tsl/scratch/hulin/scripts/extract0.01.py  all3 all4
+python /tsl/scratch/hulin/scripts/extractbitscore.py  all3 all5
+
+cut -f1 -d "_" all5 | sort | uniq > hits2
+
+# Then get information such as E.value range for each orthogroup 
+
+for file in $(cat hits2) ; do
+
+grep "$file" all5 | cut -f1 | sort | uniq | wc -l > "$file"_no2
+grep "$file" all5  | cut -f3 | sort -g > "$file"_range
+sed '$!{:a;N;s/\n/\t/;ta}' "$file"_range | awk 'NR==1{print $1} END{print $NF}' | sed '$!{:a;N;s/\n/\t/;ta}' > "$file"_range2
+grep ">" /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/"$file".fas | wc -l > "$file"_no1
+grep "$file" all5  | cut -f2 | sort -g > "$file"_b_range
+sed '$!{:a;N;s/\n/\t/;ta}' "$file"_b_range | awk 'NR==1{print $1} END{print $NF}' | sed '$!{:a;N;s/\n/\t/;ta}' > "$file"_b_range2
+done
+
+for file in $(cat hits2) ; do
+echo $file
+paste "$file"_no2  "$file"_no1 "$file"_range2 "$file"_b_range2 >> OG_info
+done
+paste hits2 OG_info > OG_info2
+
