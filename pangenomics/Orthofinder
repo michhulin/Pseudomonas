@@ -1,5 +1,6 @@
-
-# Genome annotation
+#####################################
+Genome annotation
+#####################################
 
 workdir=/tsl/scratch/hulin/pseudomonas/annotation
 gendir=/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18
@@ -21,3 +22,96 @@ for GENOME in $gendir/*.fna ; do
 sbatch /tsl/scratch/hulin/scripts/sub_prokka.sh  $GENOME $GENOME_SHORT
 
 done
+
+
+# Rename files to genome assembly name 
+
+for file in *.faa ; do
+echo $file
+file_short=$(basename $file | sed s/".faa"//g | cut -f1 -d ".")
+echo $file_short
+sed -e 's/^\(>[^[:space:]]*\).*/\1/' $file | sed s/"_"/"|peg."/g  > "$file_short".fa
+done
+
+for file in *.fa ; do
+id=$(less $file | grep ">" | cut -f1 -d "|" | sed s/">"//g | uniq)
+file_short=$(basename $file | sed s/".fa"//g)
+genome=$(pwd | rev | cut -f1 -d "/" | rev)
+echo $id
+echo $file_short
+sed s/"$id"/"$file_short"/g $file > $file_short.fasta
+done
+
+for file in *.fasta ; do
+file_short=$(basename $file | sed s/".fasta"//g)
+mv "$file_short".fasta "$file_short".faa
+rm "$file_short".fa
+rm "$file_short".fasta
+
+
+# Run Orthofinder 
+# In /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531
+
+source conda-3.7
+source orthofinder-2.3.7
+
+sbatch --mem-per-cpu 20g --cpus 4 -J ortho -o ortho.log --wrap "orthofinder -f . -t 64 -S diamond"
+
+
+# Alignment of proteins sequences of each single copy OG
+for fasta in *.fa  ; do
+    file_short=$(basename $fasta | sed s/".fa"//g)
+    Jobs=$(squeue | grep 'sub_clus' | wc -l)
+    while [ $Jobs -gt 50 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_clus' | wc -l)
+    done
+for file in $(cat t) ; do
+sbatch /tsl/scratch/hulin/scripts/sub_clustal.sh $file
+done
+
+# GBLOCKS to correct alignments
+
+rm *dnd
+rm slurm*
+
+source conda-3.7
+for file in *.fasta ; do
+Gblocks $file -t=p -d=y #Change -t to p or d for protein/dna
+echo $file
+done
+
+# rename sequences to make them shorter and compatible with phylogenetic programs
+for fasta in *fasta-gb  ; do
+name=$(basename $fasta | sed s/".fasta-gb"//g)
+sed 's/peg\.[0-9]*//g' $fasta | sed s/GCA_//g   > ./align/"$name"
+done
+
+# Convert to nexus format from fasta
+for file in ../*.fa ; do
+name=$(basename $file)
+name2=$(echo $name | sed s/".fa"//g )
+echo $name2
+perl /tsl/scratch/hulin/scripts/alignment_convert.pl -i "$name2" -o "$name2".nxs -f nexus -g fasta
+
+for file in ../*.fa ; do
+name=$(basename $file)
+name2=$(echo $name | sed s/".fa"//g )
+echo $name2
+perl  /tsl/scratch/hulin/scripts/alignment_convert.pl  -i "$file" -o "$file".phy -f phylip -g fasta
+
+
+# Concatenate single copy orthogroup alignments
+# Modify the python script every time to append the path
+python /tsl/scratch/hulin/scripts/concatenate.py
+
+perl /tsl/scratch/hulin/scripts/alignment_convert.pl -i combined.nex -o combined.phy -f phylip -g nexus
+
+sed -i s/"|"//g  combined.phy
+sed -i s/"'"//g  combined.phy
+
+sbatch /tsl/scratch/hulin/scripts/sub_iqtree.sh combined.phy  900573885
+
+
