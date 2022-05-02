@@ -1,0 +1,143 @@
+########### 
+Effective T3 on hits
+###########
+
+# First process orthogroup fasta files to add the orthogroup to each ID
+# In /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/
+
+for file in  *.fa; do
+file_name=$(basename $file | sed s/".fa"//g)
+echo $file
+sed s/">"/">'$file_name'_"/g $file | sed s/"'"//g > "$file_name".fas
+
+
+for file in $(cat hits) ; do
+echo $file
+cat /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/"$file".fas >> hits.fasta
+
+
+# Split hits into 10K for each effective run
+
+awk 'BEGIN {n_seq=0;} /^>/ {if(n_seq%10000==0){file=sprintf("hitseq%d.fasta",n_seq);} print >> file; n_seq++; next;} { print >> file; }' < hits.fasta
+
+# Run effective online server (https://effectors.csb.univie.ac.at/) 
+# Then cat all .csv files into respective enzyme group (art, nudix, tir, nh, pde, sir)
+# Manually change between enzyme groups to generate files 
+# /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/oneoutgroup/test/reduced/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/con/effective
+
+# Filter based on score (> 0.9)
+python /tsl/scratch/hulin/scripts/extract_effective4.py tir.csv tir.hits2
+
+# Then get effector hits per orthogroup
+
+cut -f1 -d "_" tir.hits2 | sort | uniq > tir_og
+
+
+
+
+############
+
+FIMO
+
+############
+
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme
+
+source meme-4.9.0_4
+# Create background file
+fasta-get-markov -norc < /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/promoters2/promoters.fasta > bg
+
+
+# Run FIMO 
+# /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/con/effective
+
+source meme-4.9.0_4
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+echo $name
+fimo --oc ./"$file_name"/"$name".15 --verbosity 2 --thresh 1.0E-4 --bgfile /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/bg --norc /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/motif.15  /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/promoters2/fasta/"$name"_peg_prom.fa
+fimo --oc ./"$file_name"/"$name".16 --verbosity 2 --thresh 1.0E-4 --bgfile /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/bg --norc /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/motif.16  /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/promoters2/fasta/"$name"_peg_prom.fa
+fimo --oc ./"$file_name"/"$name".17 --verbosity 2 --thresh 1.0E-4 --bgfile /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/bg --norc /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/motif.17  /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/promoters2/fasta/"$name"_peg_prom.fa
+fimo --oc ./"$file_name"/"$name".18 --verbosity 2 --thresh 1.0E-4 --bgfile /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/bg --norc /tsl/scratch/hulin/pseudomonas/analysis/effector_prom/meme/motif.18  /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/promoters2/fasta/"$name"_peg_prom.fa
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+echo $name
+cat ./"$file_name"/"$name"*/fimo.txt > ./"$file_name"/"$name".txt
+
+# Then get genes that were classed as effectors specifically from promoter files
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+for gene in $(cat ./"$file_name"/"$name") ; do
+echo $gene
+
+grep "$gene" ./"$file_name"/"$name".txt >> ./"$file_name"/"$name"_prom.hits
+cut -f2 ./"$file_name"/"$name"_prom.hits | sort | uniq > ./"$file_name"/"$name"_prom.hits2
+
+
+# count number of effector positive genes with promoter from fimo output file
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+wc -l ./"$file_name"/"$name"_prom.hits2 > ./"$file_name"/"$name"_prom_count
+
+
+for file in tir*og ; do 
+file_name=$(basename $file | sed s/"_og"//g )
+cat ./"$file_name"/*_prom_count  > "$file_name"_prom_count
+
+
+# count number of effector positive genomes with promoter from fimo output file
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+cut -f1 -d "|" ./"$file_name"/"$name"_prom.hits2 | sort | uniq | wc -l  > ./"$file_name"/"$name"_prom_count2
+
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+cat ./"$file_name"/*_prom_count2  > "$file_name"_prom_count2
+
+###########
+
+Also get T3SS for each strain per sequence
+
+###########
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+cut -f1 -d "|" ./"$file_name"/"$name"_prom.hits2 | sort | uniq > ./"$file_name"/"$name".3
+
+python /tsl/scratch/hulin/scripts/filter_dict.py ./"$file_name"/"$name".3 /tsl/scratch/hulin/pseudomonas/analysis/T3SS/t3ss_positive > ./"$file_name"/"$name".t3.2
+
+sed -i  '/^$/d' ./*/*.t3.2
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+for name in $(cat $file) ; do
+wc -l ./"$file_name"/"$name".t3.2 > ./"$file_name"/"$name".t3.count
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+cat ./"$file_name"/*.t3.count  > "$file_name".t3.count
+
+
+
+# Put all information together at end 
+
+
+for file in tir*og ; do
+file_name=$(basename $file | sed s/"_og"//g )
+paste "$file_name"_no2 "$file_name"_no_e2 "$file_name"_prom_count2 "$file_name".t3.count > "$file_name".txt
+
+
+
