@@ -1,0 +1,42 @@
+# Scripts from https://github.com/milesroberts-123/extract-promoter-sequences
+
+source bedtools-2.28.0
+source biopython-1.79
+source r-4.0.0
+source python-3.8.3
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/promoter_regions/
+
+
+gendir=/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/531/
+for GENOME in $gendir/*.fna ; do
+    GENOME_FILE=$(basename $GENOME)
+    GENOME_SHORT=$(echo $GENOME_FILE | sed s/.fna//g | cut -f1 -d ".")
+    echo $GENOME_SHORT
+
+sed s/"CDS"/"gene"/g  /tsl/scratch/hulin/pseudomonas/annotation/"$GENOME_SHORT"/*.gff  | sed s/"Name="/"gene="/g | sed s/"ID="/"Name="/g | sed s/"Name=[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]_"/Name="$GENOME_SHORT""|"peg\./g > $GENOME_SHORT.gff
+
+./extract_prom_seq.bash -f $GENOME -g  ./gff/"$GENOME_SHORT".gff -u 2000 -d 50 -o ./fasta/"$GENOME_SHORT"_promoters.fasta
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2
+# Extract protein names
+for file in  *fa ; do
+file_name=$(basename $file | sed s/".fa"//g)
+echo $file_name
+grep ">" $file | sed s/">"//g > ./promoters2/"$file_name"_peg
+
+# Extract sequences from all promoters file for each orthogroup
+for peg in *_peg ; do
+peg_name=$(basename $peg | sed s/"_peg"//g)
+echo $peg_name
+Jobs=$(squeue | grep 'ext_p' | wc -l)
+while [ $Jobs -gt 100 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'ext_p' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/ext_prom.sh $peg /tsl/scratch/hulin/pseudomonas/analysis/promoter_regions/fasta/promoters.fasta ../fasta/"$peg"_prom.fa
+
+
+
