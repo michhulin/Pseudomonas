@@ -1,3 +1,9 @@
+###############
+
+Run HMMER for each enzyme class against P. syringae proteome 
+
+###############
+
 # TIRs
 
 # Generate fasta alignment of hmm seed alignment from pfam
