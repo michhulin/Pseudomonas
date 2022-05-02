@@ -1,0 +1,47 @@
+########### 
+Effector phylogenetic trees
+###########
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/con/effective/effector_trees
+
+# Remove seqs more than 50% gaps
+for file in $(cat effectors) ; do cp ../../../../"$file".fas .; done
+
+source python-3.6.1
+for file in $(cat effectors) ; do
+python /tsl/scratch/hulin/scripts/fasta_drop.py "$file".fasta "$file"_new.fasta 0.5
+
+# Rename duplicate seq
+source conda-3.7
+for file in $(cat effectors) ; do
+sed s/"GCA_"//g  "$file"_new.fasta | sed s/"|peg.[0-9][0-9][0-9][0-9][0-9]"//g > "$file"_new2.fasta
+perl -pe 's/$/$seen{$_}/ if ++$seen{$_}>1 and /^>/; ' "$file"_new2.fasta > "$file"_new21.fasta
+perl  /tsl/scratch/hulin/scripts/alignment_convert.pl  -i "$file"_new21.fasta  -o "$file"_new.phy  -f phylip -g fasta
+
+for file in $(cat effectors) ; do
+sbatch /tsl/scratch/hulin/scripts/sub_iqtree_noO2.sh "$file"_new.phy
+sbatch /tsl/scratch/hulin/scripts/sub_iqtree_noO2.sh "$file"_new.fasta.uniqueseq.phy
+
+# Get effector, hrp information into a file for R phylogeny annotations 
+# data from
+# /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/con/effective
+# /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2/con/effective/effector_trees/alignments/pa
+
+for file in $(cat effectors) ; do
+cut -f1 -d "|" $file | sed s/"GCA_"//g  > "$file"_g
+python /tsl/scratch/hulin/scripts/filter_eff_hrp.py  /tsl/scratch/hulin/pseudomonas/cpg "$file"_g > "$file"_t3
+
+for file in $(cat effectors) ; do
+python /tsl/scratch/hulin/scripts/filter_eff_hrp.py "$file"_eff "$file" > "$file"_e
+python /tsl/scratch/hulin/scripts/filter_eff_hrp.py "$file"_prom "$file" > "$file"_p
+paste  "$file"_e "$file"_p | cut -f1,2,4 > "$file"_pa
+paste  "$file"_pa "$file"_t3 | cut -f1,2,3,5 > "$file"_pa2
+
+for file in $(cat effectors) ; do
+sed -i '1 i\gene effector promoter cpg' "$file"_pa2
+
+sed -i s/"GCA_"//g *_pa2
+sed -i s/"|peg"//g *_pa2
+
+for file in $(cat effectors) ; do
+tr -s '[:blank:]' ',' < "$file"_pa2 > "$file"_pa3
