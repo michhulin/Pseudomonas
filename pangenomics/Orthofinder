@@ -48,8 +48,10 @@ mv "$file_short".fasta "$file_short".faa
 rm "$file_short".fa
 rm "$file_short".fasta
 
+#####################################
+Run Orthofinder 
+#####################################
 
-# Run Orthofinder 
 # In /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531
 
 source conda-3.7
@@ -58,7 +60,7 @@ source orthofinder-2.3.7
 sbatch --mem-per-cpu 20g --cpus 4 -J ortho -o ortho.log --wrap "orthofinder -f . -t 64 -S diamond"
 
 
-# Alignment of proteins sequences of each single copy OG
+# Alignment of proteins sequences of each single copy OG generated in Orthofinder folder "Single_Copy_Orthologue_Sequences"
 for fasta in *.fa  ; do
     file_short=$(basename $fasta | sed s/".fa"//g)
     Jobs=$(squeue | grep 'sub_clus' | wc -l)
@@ -68,6 +70,8 @@ for fasta in *.fa  ; do
         printf "."
         Jobs=$(squeue | grep 'sub_clus' | wc -l)
     done
+    
+ls * > t   
 for file in $(cat t) ; do
 sbatch /tsl/scratch/hulin/scripts/sub_clustal.sh $file
 done
