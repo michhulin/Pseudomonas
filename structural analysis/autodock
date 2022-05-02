@@ -1,0 +1,260 @@
+############
+Running Autodock Vina and processing output 
+############
+
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/autodock
+
+# Prepare NAD+ ligand in pdbqt format
+# Ligands downloaded in 3D format from https://zinc.docking.org/substances/home/ used Safari as Chrome didn't download files
+
+
+for ligand in *mol2 ; do
+singularity exec --overlay ../ad_overlay.img ../autodock.img prepare_ligand -l $ligand
+
+# convert ligands to pdb
+singularity exec --overlay ../ad_overlay.img ../autodock.img obabel  -i pdbqt *.pdbqt  -o pdb -O *.pdb
+
+# Rg calculation with python
+# NAD+ Rg * 2.9 = 18.531
+# from https://github.com/sarisabban/Rg/blob/master/Rg.py
+source python-3.8.3
+for file in *.pdb ; do
+file_name=$(basename $file | sed s/".pdb"//g )
+python3 /tsl/scratch/hulin/scripts/rg2.py $file > "$file_name"_config
+python /tsl/scratch/hulin/scripts/convertrg.py "$file_name"_config "$file_name"_config2
+sed s/"="/" ="/g "$file_name"_config2 > "$file_name"_config
+done
+
+# Resulting file /tsl/scratch/hulin/pseudomonas/analysis/autodock/ligands4/NAD_config
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/autodock/alphafold/TIRHMM
+# Prepare TIR protein structures for docking in predicted active sites based on position that aligned to SARM1 E642
+
+# prepare config file with p2rank pocket prediction
+source p2rank-2.3.1
+for file in *pdb ;
+do echo $file
+prank predict -f $file -o .
+done
+
+# get pocket ranges
+for file in *_predictions.csv ; do
+file_name=$(basename $file | sed s/".pdb_predictions.csv"//g )
+echo $file_name
+while read line ; do
+res=$(echo $line | cut -f10 -d "," | sed s/"A_"//g | tr ' ' '\n ' | sort -n | tr '\n' ' ' | awk '{print $1 "\t" $(NF)}')
+echo $res
+done < "$file_name".pdb_predictions.csv > "$file_name"_pockets
+cut -f1 -d "," $file   > "$file_name"_pocket_names
+paste "$file_name"_pocket_names "$file_name"_pockets > "$file_name"_pocket_info
+sed -E 's/\s+/\t/g' "$file_name"_pocket_info > "$file_name"_pocket_info2
+
+## Get catalytic pocket
+for file in /tsl/scratch/hulin/pseudomonas/analysis/tm-align/frtmalign/alphafold/TIR_complete/SARM1/*key_residues  ; do
+
+file_name=$(basename $file | sed s/".pdb_key_residues"//g | sed s/"SARM1_TIR.pdb_"//g )
+sed -i 's/ \+ /\t/g' $file
+sed -i s/"\s"/"\t"/g $file
+echo $file_name
+res=$(cut -f14 $file )
+echo $res
+
+while read line ; do
+pocket=$(echo $line | cut -f1 -d " ")
+start=$(echo $line |cut -f2 -d " ")
+end=$(echo $line |cut -f3 -d " ")
+if [  "$res"  -ge $start -a "$res" -le $end ] ; then
+echo $pocket
+fi
+done < "$file_name"_pocket_info2 > "$file_name"_cat_pocket
+
+# Get correct pocket
+for file in *_cat_pocket ; do
+file_name=$(basename $file | sed s/"_cat_pocket"//g )
+echo $file_name
+pocket=$(head -n1  $file | grep pocket )
+echo $pocket
+while read line ; do
+col1=$(echo $line | cut -f1 -d ",")
+if [  "$col1"  == "$pocket " ] ; then
+echo $line
+else
+echo none
+fi
+done < "$file_name".pdb_predictions.csv > "$file_name"_p1
+sort -r "$file_name"_p1 | head -n1 > "$file_name"_p2
+
+# Generating docking config files that contains coordinates to dock based on position of pocket using Rg * 2.9 of NAD+ 
+
+for file in *p2 ; do
+file_name=$(basename $file | sed s/"_p2"//g )
+mkdir $file_name
+python /tsl/scratch/hulin/scripts/extract_pocket2.py $file "$file_name"_config
+
+
+for file in *_config ; do
+file_name=$(basename $file | sed s/"_config"//g )
+for ligand in /tsl/scratch/hulin/pseudomonas/analysis/autodock/ligands4/NAD_config ; do
+ligand_name=$(basename $ligand  | sed s/"_config"//g )
+echo $file_name
+echo $ligand_name
+paste $file $ligand > ./config/"$file_name"_"$ligand_name"_config
+sed s/"\t"/"\n"/g ./config/"$file_name"_"$ligand_name"_config | sort > ./config/"$file_name"_"$ligand_name"_config.txt
+
+
+# Batch submit the docking program with different config files
+for file in *.pdbqt ; do
+file_name=$(basename $file | sed s/".pdbqt"//g )
+mkdir "$file_name"
+
+for ligand in /tsl/scratch/hulin/pseudomonas/analysis/autodock/ligands4/NAD.pdbqt ; do
+ligand_name=$(basename $ligand  | sed s/".pdbqt"//g )
+echo $ligand_name
+Jobs=$(squeue | grep 'vina' | wc -l)
+while [ $Jobs -gt 20 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'vina' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/vina3.sh $file /tsl/scratch/hulin/pseudomonas/analysis/autodock/alphafold/TIRHMM/config/"$file_name"_"$ligand_name"_config.txt /tsl/scratch/hulin/pseudomonas/analysis/autodock/alphafold/TIRHMM/"$file_name"/"$ligand_name".pdbqt $ligand
+
+done
+done
+
+
+
+# Processing the output binding affinities
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/autodock/alphafold/TIRHMM
+for protein in *pdbqt ; do
+protein_name=$(basename $protein | sed s/".pdbqt"//g)
+
+for file in $workdir/"$protein_name"/*pdbqt ; do
+file_name=$(basename $file | sed s/".pdbqt"//g)
+grep RESULT $file | sed 's/[[:blank:]]\+/\t/g' | cut -f4 | head -n+1 > $workdir/"$protein_name"/"$file_name".t
+
+for protein in *pdbqt ; do
+protein_name=$(basename $protein | sed s/".pdbqt"//g)
+for file in $workdir/"$protein_name"/*.t ; do
+file_name=$(basename $file )
+awk '
+  function basename(file) {
+    sub(".*/", "", file)
+    return file
+  }
+{ print basename(FILENAME) "\n" $0  } ' $file > $workdir/"$protein_name"/"$file_name".new
+
+for protein in *pdbqt ; do
+protein_name=$(basename $protein | sed s/".pdbqt"//g)
+paste $workdir/"$protein_name"/*new > $workdir/"$protein_name"/"$protein_name"_results
+
+for protein in *pdbqt ; do
+protein_name=$(basename $protein | sed s/".pdbqt"//g)
+for f in $workdir/"$protein_name"_A/"$protein_name"_results; do
+f2=$(basename $f | sed s/"_results"//g)
+ sed -i "s/^/$f2\t/" $f; done
+
+# Get into docked format
+for protein in *pdbqt ; do
+protein_name=$(basename $protein | sed s/".pdbqt"//g)
+csplit -z ./"$protein_name"/NAD.pdbqt /MODEL/ '{*}' -f ./"$protein_name"/NAD_MODEL
+
+for protein in *.pdbqt ; do
+protein_name=$(basename $protein | sed s/".pdbqt"//g)
+for model in ./"$protein_name"/NAD_MODEL* ; do
+model_name=$(basename $model)
+ singularity exec --overlay ../../ad_overlay.img ../../autodock.img obabel -i pdbqt $model -o pdb -O ./"$protein_name"/"$model_name".pdb -h
+
+
+ #same thing convert protein/receptor using above babel command
+ for protein in *pdbqt ; do
+ protein_name=$(basename $protein | sed s/".pdbqt"//g)
+ singularity exec --overlay ../../ad_overlay.img ../../autodock.img obabel  -i pdbqt $protein  -o pdb -O "$protein_name"_2.pdb
+
+ for protein in *.pdb ; do
+ protein_name=$(basename $protein | sed s/".pdb"//g)
+ echo $protein_name
+ for model in ./"$protein_name"/*pdb ; do
+ model_name=$(basename $model | sed s/".pdb"//g)
+  echo $model_name
+ cat $protein  "$model" | grep -v '^END ' | grep -v '^END$' > ./docked/docked_"$protein_name"_"$model_name".pdb
+ 
+ # in docked folder 
+ 
+  source plip-2.2.2
+
+ for file in * ; do
+ file_name=$(basename $file | sed s/".pdb"//g)
+ plip -f  $file -o . --name $file_name -t
+ done
+ 
+ # Get interacting residues from PLIP results
+
+for file in *txt ; do
+file_name=$(basename $file | sed s/".txt"//g)
+protein=$(echo $file_name | sed s/"_NAD_MODEL[0-9][0-9]"//g | sed s/"docked_"//g)
+echo $protein
+grep "|" $file | grep -v RESNR | cut -f2,3 -d "|" | sort -k1 | uniq >> "$protein"_int_res
+
+
+# Get SARM1 corresponding AA to highlight on heatmap those that may be involved in the binding
+
+
+for file in *_int_res  ; do
+file_name=$(basename $file)
+sort -k1 $file | uniq -c > "$file_name".3
+
+for file in *_int_res  ; do
+file_name=$(basename $file)
+sort -k1 $file | uniq > "$file_name".2
+
+# first split into multiple files
+for file in *_int_res.2 ; do
+file_name=$(basename $file | sed s/"_int_res\.2"//g )
+split -l1 $file "$file_name"_int_res_
+
+# Remove spaces from file
+sed -i s/" "//g *_int_res_*
+
+
+
+# Get corresponding SARM1 residue numbers to see which interacting ones are aligned
+for file in *_int_res_* ; do
+file_name=$(basename $file | sed s/"_int_res_[a-z][a-z]"//g )
+
+while read line ; do
+no1=$(echo $line | cut -f1 -d "|")
+res=$(echo $line |cut -f2 -d "|")
+done < $file
+
+while read line ; do
+no_a=$(echo $line | cut -f13 -d " ")
+res_a=$(echo $line | cut -f12 -d " ")
+if [  "$no_a" == "$no1" ] ; then
+echo $line
+fi
+done < /tsl/scratch/hulin/pseudomonas/analysis/tm-align/frtmalign/alphafold/TIR_complete/SARM1/"$file_name"_2 >> "$file_name"_sarm_residues
+
+for file in *_sarm_residues ; do
+file_name=$(basename $file | sed s/"_sarm_residues"//g)
+awk '{print FILENAME " " $0}' $file > "$file_name"_sarm_residues2
+cut -f1,6 -d " " "$file_name"_sarm_residues2 | sed s/"_sarm_residues"//g > "$file_name"_sarm_residues3
+
+# In R: Build a list of each orthogroup with OG name and SARM1 residue to create table in R
+
+res <- read.table("/Users/hulin/Documents/R tables/sarm1_2.txt", stringsAsFactors=FALSE, colClasses='character',  row.names = ,1)
+
+library(reshape2)
+tab<-dcast(res, Og~res, length)
+write.table(tab,file="restable3.txt")
+
+# Get list all interacting residues
+for file in *int_res.2 ; do
+file_name=$(basename $file | sed s/"_int_res\.2"//g )
+sed s/"    | "/"-"/g $file | tr '\n' ',' | sed s/"     "//g | sed s/" "//g > "$file_name"_allres
+
+
+
+
