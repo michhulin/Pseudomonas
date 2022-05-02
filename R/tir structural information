@@ -1,0 +1,56 @@
+library(ape)
+library(ggplot2)
+library(ggtree)
+library(phangorn)
+library(TDbook)
+library(ggmsa)
+library(ggnewscale)
+
+tree <- read.tree("/Users/hulin/Documents/fitch_new.tre")
+tir <- read.csv("/Users/hulin/Documents/R tables/tir_residues.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+binding <- read.csv("/Users/hulin/Documents/R tables/tir_binding.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+binding[,1]=as.numeric(binding[,1])
+rmsd <- read.csv("/Users/hulin/Documents/R tables/sarm1_rmsd.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+rmsd[,1]=as.numeric(rmsd[,1])
+
+sarm <- read.csv("/Users/hulin/Documents/R tables/sarm1_res_graph5.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = ,1)
+sarm$no=as.numeric(sarm$no)
+tree$edge.length = tree$edge.length * 1000
+tree2<-midpoint(tree)
+q<-ggtree(tree2) %<+% tir
+q2<- q  + geom_tiplab(size=1)
+#q2 + geom_tippoint(color=tir$e)
+
+
+
+data=tidy_msa("/Users/hulin/Documents/tir_reg.fasta")
+data2=tidy_msa("/Users/hulin/Documents/tir_reg_long2.fasta")
+
+q3<-q2 + geom_facet(geom = geom_msa, data = data2,  panel = 'msa',
+               font = NULL, color = "Chemistry_AA") +
+    xlim_tree(2)
+q4 <- q3 + new_scale_fill()
+q5<-gheatmap(q4,tir,width=0.1, font.size=0.5 , color = "white", offset=20)  + scale_fill_manual(values=c("white","black"))
+q6<-q5+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=0.01)
+
+q7 <- q6 + new_scale_fill()
+q8<-gheatmap(q7,binding,width=0.05, font.size=0.5 , color = "white", offset=28)  + scale_fill_gradient(low="darkred",high="white")
+q9 <- q8 + new_scale_fill()
+q10<-gheatmap(q9,rmsd,width=0.05, font.size=0.5 , color = "white", offset=30)  + scale_fill_gradient(low="darkblue",high="white")
+
+pdf(file = "/Users/hulin/Documents/fitch_tir.pdf",width=10,height=5)
+q10
+dev.off()
+
+# Create no. interacting residues graph
+#Turn your 'treatment' column into a character vector
+sarm$res <- as.character(sarm$res)
+#Then turn it back into a factor with the levels in the correct order
+sarm$res  <- factor(sarm$res, levels=unique(sarm$res ))
+p1<-ggplot(data=sarm, aes(x=res,y=no, fill =no2)) + geom_bar(stat="identity") + ylim(0,20) + theme(panel.grid.major = element_blank(), axis.line = element_line(size = 0.5, colour = "darkgrey"),legend.key = element_blank(), axis.text.x = element_text(angle = 90, vjust = 1, hjust=1, size=5),  panel.grid.minor = element_blank(),panel.background = element_blank())
+
+pdf(file = "/Users/hulin/Documents/p_new1.pdf",width=10,height=2)
+p1  +  scale_fill_manual(values=c("grey","forestgreen"))
+dev.off()
+
+
