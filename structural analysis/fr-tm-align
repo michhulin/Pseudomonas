@@ -1,0 +1,386 @@
+#########
+Fr-TM-align
+#########
+
+# Alignment to hSARM1 reference 
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/tm-align/frtmalign/alphafold/TIR_complete
+for file1 in *.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+
+sbatch /tsl/scratch/hulin/scripts/sub_frtmalign.sh  ../SARM1_TIR.pdb $file1 SARM1
+
+for file in *aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+ls $file > "$file_short"_key_residues
+grep "1CA  GLU   642" $file  >> "$file_short"_key_residues
+sed s/".pdb_aligned_residues"//g  "$file_short"_key_residues  | sed s/"SARM1_TIR\.pdb_"//g > "$file_short"_key_residues2
+tr "\n" "\t" < "$file_short"_key_residues2 > "$file_short"_key_residues
+sed -i '' -e '$a\' "$file_short"_key_residues
+rm "$file_short"_key_residues2
+
+
+## Script all vs. all
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/tm-align/frtmalign/alphafold/TIR_complete
+for file1 in *.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+for file2 in *.pdb ; do
+file_short2=$(basename $file2 | sed s/".pdb"//g)
+echo $file_short2
+Jobs=$(squeue | grep 'fr' | wc -l)
+while [ $Jobs -gt 50 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'fr' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/sub_frtmalign.sh  $file1 $file2 out
+done
+done
+
+for file in *_TMscore ; do
+file_short=$(basename $file | sed s/".pdb_TMscore"//g)
+
+cut -f2 -d ";" $file | sed s/" RMSD =  "//g > "$file_short".rm
+awk ' { print FILENAME "\t" $0  } ' "$file_short".rm > "$file_short".rm2
+sed -i s/"\.pdb_"/"\t"/g "$file_short".rm2
+sed -i s/"\.rm"//g "$file_short".rm2
+
+
+
+# Get no. aligned residues
+
+for file in *_aligned_residues ; do
+file_short=$(basename $file | sed s/".pdb_aligned_residues"//g)
+wc -l $file | cut -f1 -d " " > "$file_short".ar
+
+paste "$file_short".rm2 "$file_short".ar > "$file_short".srm
+
+
+# check all commands were completed
+for file in ../*pdb ; do file_short=$(basename $file | sed s/".pdb"//g) ; ls "$file_short"*srm | wc -l >> t; done
+
+
+
+
+## Get key residue region and convert to fasta file 
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/tm-align/frtmalign/alphafold/TIR_complete
+for file1 in $workdir/*.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+
+sed 's/ \+ /\t/g' SARM1_TIR.pdb_"$file_short".pdb_aligned_residues  > "$file_short"_1
+sed s/"\s"/"\t"/g "$file_short"_1 > "$file_short"_2
+sed -i '1i\\'  "$file_short"_2
+while read line; do
+grep '1CA[[:blank:]]THR[[:blank:]]561' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PRO[[:blank:]]562' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]563' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]564' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]565' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]566' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]567' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]TYR[[:blank:]]568' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]569' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]570' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASN[[:blank:]]571' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]572' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]573' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]574' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]575' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]576' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]577' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]578' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]579' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]580' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]581' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]582' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]HIS[[:blank:]]583' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]584' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]585' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]586' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]HIS[[:blank:]]587' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]588' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]589' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]590' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]591' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]592' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]593' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]594' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]595' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]596' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]597' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]598' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]599' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]600' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]601' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]602' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]603' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]604' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]605' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]606' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]607' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]608' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]609' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]610' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]611' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]MET[[:blank:]]612' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]613' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]614' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]615' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASN[[:blank:]]616' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]617' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]618' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]619' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]620' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]621' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]622' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PRO[[:blank:]]623' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]624' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]625' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]626' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]627' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]628' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]CYS[[:blank:]]629' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]MET[[:blank:]]630' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]631' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]632' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]HIS[[:blank:]]633' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]634' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]CYS[[:blank:]]635' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]636' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]637' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]TRP[[:blank:]]638' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]639' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]HIS[[:blank:]]640' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]641' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]642' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]643' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]644' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]THR[[:blank:]]645' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]646' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]647' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]648' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]CYS[[:blank:]]649' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]650' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]651' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASN[[:blank:]]652' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]653' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]654' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PRO[[:blank:]]655' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]656' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]657' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]658' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]659' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]660' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]661' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]TRP[[:blank:]]662' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PRO[[:blank:]]663' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]664' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PRO[[:blank:]]665' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]666' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]667' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]668' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PRO[[:blank:]]669' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]670' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]671' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]MET[[:blank:]]672' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]673' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]674' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]VAL[[:blank:]]675' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]676' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]THR[[:blank:]]677' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]678' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASN[[:blank:]]679' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]680' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]681' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]682' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]TRP[[:blank:]]683' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]684' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]HIS[[:blank:]]685' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]686' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]TYR[[:blank:]]687' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]688' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]689' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ALA[[:blank:]]690' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]THR[[:blank:]]691' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]692' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]693' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]694' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]695' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]696' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]697' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]698' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]699' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]700' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+cut -f12 "$file_short"_3 | sed s/"\/"//g | tr '\n' ' ' | sed s/" "//g > "$file_short"_4
+
+sed 's/ALA/A/g;s/CYS/C/g;s/ASP/D/g;s/GLU/E/g;s/PHE/F/g;s/GLY/G/g;s/HIS/H/g;s/HID/H/g;s/HIE/H/g;s/ILE/I/g;s/LYS/K/g;s/LEU/L/g;s/MET/M/g;s/ASN/N/g;s/PRO/P/g;s/GLN/Q/g;s/ARG/R/g;s/SER/S/g;s/THR/T/g;s/VAL/V/g;s/TRP/W/g;s/TYR/Y/g;s/MSE/X/g' < "$file_short"_4 > "$file_short"_5
+
+
+for file in *_5 ; do
+file_name=$(basename $file | sed s/"_5"//g )
+awk '
+  function basename(file) {
+    sub(".*/", "", file)
+    return file
+  }
+{ print ">"basename(FILENAME) "\n" $0  } ' $file | sed s/"_5"//g > "$file_name".fasta
+
+
+# Key residue table
+
+sed -i 's/ \+ /\t/g' SARM*
+sed -i s/"\s"/"\t"/g SARM*
+
+for file in *key_residues ; do
+python /tsl/scratch/hulin/scripts/filter_key_residues.py $file >> output
+
+
+
+
+
+
