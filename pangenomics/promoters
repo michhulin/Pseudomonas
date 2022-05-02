@@ -1,3 +1,10 @@
+#############
+
+Extract promoter sequences for all CDS and group by orthogroup 
+
+#############
+
+
 # Scripts from https://github.com/milesroberts-123/extract-promoter-sequences
 
 source bedtools-2.28.0
