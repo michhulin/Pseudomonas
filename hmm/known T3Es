@@ -1,0 +1,9 @@
+# Get orthogroups containing known T3E homologues
+# Effectors from pseudomonas.syringae.org 
+
+sbatch /tsl/scratch/hulin/scripts/sub_blastp.sh all.fas  ps_effectors.fasta . 
+
+# Filter based on 100% identity and <10^-10 E value (as expect blast input query to be in the output list)
+
+/tsl/scratch/hulin/scripts/filter_blastp.py all_ps_effectors.hits.txt sig_hits.txt
+
