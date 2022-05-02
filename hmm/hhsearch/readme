@@ -1,0 +1,191 @@
+###############
+
+Run HHsearch on each orthogroup 
+
+###############
+
+
+# In /tsl/scratch/hulin/pseudomonas/analysis/phylogeny/orthofinder/531/OrthoFinder/Results_Feb07/Orthogroup_Sequences/2
+
+
+# Reorder with largest sequence first 
+
+for file in  *fa ; do
+file_name=$(basename $file | sed s/".fa"//g)
+echo $file_name
+Jobs=$(squeue | grep 'sort' | wc -l)
+while [ $Jobs -gt 50 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'sort' | wc -l)
+done
+
+sbatch /tsl/scratch/hulin/scripts/sub_sortfa.sh $file ../$file_name.faa
+
+# Then run clustal to get alignment
+
+for file in  *.faa ; do
+Jobs=$(squeue | grep 'clus' | wc -l)
+while [ $Jobs -gt 150 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'clus' | wc -l)
+done
+
+sbatch /tsl/scratch/hulin/scripts/sub_clustal.sh $file
+
+#### Then reformat to a2m format for HHPred
+
+for file in  *.fasta  ; do
+file_name=$(basename $file | sed s/".fasta"//g)
+Jobs=$(squeue | grep 'refo' | wc -l)
+while [ $Jobs -gt 150 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'refo' | wc -l)
+done
+
+sbatch /tsl/scratch/hulin/scripts/sub_reformat.sh $file "$file_name".a2m
+
+
+# Add secondary structure to MSA file and convert to A3M
+
+for file in  *.a2m  ; do
+file_name=$(basename $file | sed s/".a2m"//g)
+Jobs=$(squeue | grep 'add' | wc -l)
+while [ $Jobs -gt 180 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'add' | wc -l)
+done
+
+sbatch /tsl/scratch/hulin/scripts/addss.sh $file "$file_name".a3m
+
+
+# Generate consensus
+
+for file in  *.a3m  ; do
+file_name=$(basename $file | sed s/".a2m"//g)
+Jobs=$(squeue | grep 'add' | wc -l)
+while [ $Jobs -gt 200 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'add' | wc -l)
+done
+
+sbatch /tsl/scratch/hulin/scripts/hhcon.sh $file ../con/"$file_name"
+
+# Then run HHsearch
+
+for file in  $(cat t3) ; do
+echo $file
+Jobs=$(squeue | grep 'hhpr' | wc -l)
+while [ $Jobs -gt 200 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'hhpr' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/sub_hhpred2.sh "$file".a3m "$file_name"_out
+
+
+# Process to just output best hit for multiple domains (up to 3 per protein)
+for file in  *.hhr ; do
+echo $file
+Jobs=$(squeue | grep 'exth' | wc -l)
+while [ $Jobs -gt 200 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'exth' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/sub_exthitnud4.sh $file
+
+
+# Or process to get best hit for multiple domains with hits towards nucleosidases prioritised (up to 3 per protein)
+# og2 is file with list of orthogroup names 
+
+for file in  $(cat og2) ; do
+echo $file
+bash /tsl/scratch/hulin/scripts/sub_exthitnud5.sh "$file".hhr
+
+
+## Get orthogroups that have homology to nucleosidases
+
+sed -i '/^$/d' *
+find  . -type f -not -empty > h
+grep "hits" h > h2
+sed s/"\.\/"//g h2 > h3
+
+for file in $(cat h3) ; do
+cp $file ./hits
+done
+
+grep -i nudix *sig > NUDIX2
+grep -i mutt *sig >> NUDIX2
+grep -i pyrophosphatase *sig >> NUDIX2
+grep -i pyrophosphohydrolase *sig >> NUDIX2
+sort NUDIX2 | uniq  > NUDIX3
+
+grep -i TIR *sig > TIR2
+grep -i Toll *sig >> TIR2
+grep -i "CMP hydrolase" *sig >> TIR2
+grep -i "ADP-ribosyl cyclase" *sig >> TIR2
+grep -i "interleukin" *sig >> TIR2
+grep -i "sefir" *sig >> TIR2
+sort TIR2 | uniq  > TIR3
+
+grep -i "ribosyltransferase" *sig > ART2
+grep -i "ribosyl-transferase"  *sig >> ART2
+grep -i ribosylase  *sig >> ART2
+grep -i PARP  *sig >> ART2
+sort ART2 | uniq  > ART3
+
+grep -i "phosphodiesterase" *sig > PDE2
+grep -i "PDEase"  *sig >> PDE2
+sort PDE2 | uniq  > PDE3
+
+
+grep -i "sir2" *sig > SIR2
+grep -i "sirtuin"  *sig >> SIR2
+sort SIR2 | uniq  > SIR3
+
+grep -i "Nucleoside hydrolase" *sig > NH2
+grep -i "N-glycosylase"  *sig >> NH2
+sort NH2 | uniq  > NH3
+
+
+for file in *hits ; do
+file_name=$(basename $file | sed s/"_hits"//g)
+echo $file
+# Get those that were within top 15 hits
+python /tsl/scratch/hulin/scripts/extract_hhr_hits.py $file ./sig/"$file_name"_sig
+
+
+# within sig folder 
+
+
+find  . -type f -not -empty > h
+grep "sig" h > h2
+sed s/"\.\/"//g h2 > h3
+
+for file in $(cat h3) ; do
+cp $file ./sig
+done
+
+ls * > hits
+sed -i s/"_sig"//g hits
+
+# get best hit
+for file in  *sig; do
+file_name=$(basename $file | sed s/"_sig"//g)
+head -n+1 $file > ./sig/"$file_name"_best
+
+
+
+
