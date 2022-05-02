@@ -1,0 +1,87 @@
+#################################################################
+
+# T3SS gene cluster identification
+
+#################################################################
+
+# Proteins used for this analysis were taken from Pto DC3000/Pss B728A/P. viridiflava T3SS clusters
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/T3SS/viridiflava
+gendir=/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/
+
+
+for GENOME in $gendir/*.fna ; do
+     GENOME_FILE=$(basename $GENOME)
+     GENOME_SHORT=$(echo $GENOME_FILE | sed s/.fna//g | cut -f1 -d ".")
+     echo $GENOME_SHORT
+
+    Jobs=$(squeue | grep 'sub_tbla' | wc -l)
+    while [ $Jobs -gt 50 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_tbla' | wc -l)
+    done
+
+sbatch /tsl/scratch/hulin/scripts/sub_tblastn.sh  $GENOME $workdir/viridiflava.t3ss.fasta  out pergenome
+
+done
+
+# Filter based on 50% QL and 30% ID
+# Do for each genome
+for file in *txt2 ; do
+file_name=$(basename $file)
+echo $file_name
+
+python /tsl/scratch/hulin/scripts/filter_blast_hrp1.py $file "$file_name"_out
+
+for output in *_out ; do
+out_name=$(basename $output | sed s/".hits.txt2_out"//g)
+echo $out_name
+for file in $(cat /tsl/scratch/hulin/pseudomonas/analysis/T3SS/viridiflava_accessions) ; do
+grep $file $output | sort -nrk2 | head -n 1 >> "$out_name"_out2
+done
+
+
+# Then give an overall score based on gene scores in cluster. 0 or 1 present (0) if all genes present and above thresholds (2)
+for file in *out2 ; do
+file_name=$(basename $file | sed s/"_out2"//g)
+echo $file_name
+cut -f2  $file  | sort | uniq | head -1 | sed s/"1"/"0"/g | sed s/"2"/"1"/g > ./out/"$file_name"_output
+done
+
+
+cat *output > output2
+ls *output > names
+paste names output2 > viridiflava_out
+
+
+sed -i s/"_dc3000.t3ss_output"//g dc3000_out
+sed -i s/"GCA_"//g dc3000_out
+
+sed -i s/"_B728A.t3ss_output"//g b728a_out
+sed -i s/"GCA_"//g b728a_out
+
+sed -i s/"_viridiflava.t3ss_output"//g viridiflava_out
+sed -i s/"GCA_"//g viridiflava_out
+
+
+
+# In /tsl/scratch/hulin/pseudomonas
+python /tsl/scratch/hulin/scripts/filter_dict.py genomes_531 t3ss_30 > t3ss_30_out
+sed -i '/^$/d' t3ss_30_out
+
+
+# Add file name
+
+for filename in *_output ; do
+echo $filename
+sed "1s/^/${filename} \n/" ${filename} > $filename.new
+
+
+sed -i s/"_dc3000.t3ss_output"//g
+
+
+paste *.new > matrix
+paste protein_list matrix > matrix2
+
