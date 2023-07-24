@@ -1,0 +1,30 @@
+## PROMALS-3D used to create alignment file of OG18056 homologs
+
+# Create tree with model selection with IQ-TREE
+# In /tsl/scratch/hulin/pseudomonas/analysis/effectors/18056/blastdb/tree/structure
+
+sbatch /tsl/scratch/hulin/scripts/sub_iqtree_noOm.sh 18056.fasta
+
+
+# R code used to create phylogeny of OG18056 homologs
+
+library(ape)
+library(ggplot2)
+library(ggtree)
+library(phangorn)
+library(TDbook)
+library(ggmsa)
+library(ggnewscale)
+
+tree <- read.tree("/Users/hulin/Desktop/18056_str.tre")
+hrp1 <- read.csv("/Users/hulin/Desktop/18056_hrp.csv", stringsAsFactors=FALSE, colClasses='character')
+
+q<-ggtree(tree,layout="equal_angle")
+
+q2 <- q + geom_tiplab(size=1)
+q3 <- q %<+% hrp1  +
+   geom_tippoint(aes(colour = as.factor(hrp))) + scale_colour_manual(values=c("black","#86DC3D","#FFB6C1"))
+
+pdf(file = "/Users/hulin/Documents/18056tree1.pdf",width=5,height=3)
+q3  + geom_treescale(offset=0.01, fontsize = 2, linesize = 0.2)
+dev.off()
