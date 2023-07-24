@@ -1,0 +1,72 @@
+# R code to generate metabolomics plots 
+
+library(ggplot2)
+cadpr<-read.csv("/Users/hulin/Documents/cADPR.csv", col.names=,1)
+attach(cadpr)
+
+p<-ggplot(data=cadpr, aes(x=x, y=y)) +  geom_line(aes(colour=peak))  + ylim(0,100000)   + theme(panel.grid.major = element_blank(), legend.key = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5)) + labs(x = "Retention Time (minutes)", y = "Intensity (counts)")
+
+
+pdf(file = "/Users/hulin/Documents/at_metabolomics4.pdf",width=6,height=3)
+p + facet_wrap(~sample, ncol=6) + scale_x_continuous(breaks=c(2,4,6))  + xlim(2,6) + scale_y_continuous(labels = scientific)
+
+dev.off()
+
+# semi-invitro
+
+library(ggplot2)
+cadpr<-read.csv("/Users/hulin/Documents/cadprSI4.csv", col.names=,1)
+attach(cadpr)
+
+p<-ggplot(data=cadpr, aes(x=x, y=y)) +  geom_line(aes(colour=peak))  + ylim(0,100000)   + theme(panel.grid.major = element_blank(), legend.key = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5)) + labs(x = "Retention Time (minutes)", y = "Intensity (counts)")
+
+
+pdf(file = "/Users/hulin/Documents/SI_metabolomics_new.pdf",width=6,height=3)
+p + facet_wrap(~sample, ncol=6) + scale_x_continuous(breaks=c(2,4,6))  + xlim(2,6) + scale_y_continuous(labels = scientific)
+
+dev.off()
+
+# standards
+
+library(ggplot2)
+library(scales)
+cadpr<-read.csv("/Users/hulin/Documents/cadpr-st_new.csv", col.names=,1)
+attach(cadpr)
+
+p<-ggplot(data=cadpr, aes(x=x, y=y)) +  geom_line(aes(colour=peak))     + theme(panel.grid.major = element_blank(), legend.key = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5)) + labs(x = "Retention Time (minutes)", y = "Intensity (counts)")
+
+
+pdf(file = "/Users/hulin/Documents/metabolomics-st_newest1.pdf",width=10,height=3)
+p + scale_x_continuous(breaks=c(2,4,6))  + xlim(2,6)  + scale_y_continuous(labels = scientific) + scale_y_continuous(limits=c(0,60000),breaks=c(0,20000,40000,60000)) + scale_colour_manual(values=c("#F8766D","#F8766D","#F8766D","#00BFC4")) + facet_wrap(~sample, ncol=5,strip.position="right")
+
+dev.off()
+
+# standards combined
+
+library(ggplot2)
+library(scales)
+cadpr<-read.csv("/Users/hulin/Documents/cadpr_combined.csv", col.names=,1)
+attach(cadpr)
+
+p<-ggplot(data=cadpr, aes(x=x, y=y)) +  geom_line(aes(colour=peak))     + theme(panel.grid.major = element_blank(), legend.key = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5)) + labs(x = "Retention Time (minutes)", y = "Intensity (counts)")
+
+
+pdf(file = "/Users/hulin/Documents/metabolomics_combined.pdf",width=3,height=3)
+p + scale_x_continuous(breaks=c(2,4,6))  + xlim(2,6)  + scale_y_continuous(labels = scientific) + scale_colour_manual(values=c("#F8766D","#F8766D","#00BFC4")) + facet_wrap(~sample, ncol=1,strip.position="right")
+
+dev.off()
+
+# mixture
+
+library(ggplot2)
+library(scales)
+cadpr<-read.csv("/Users/hulin/Documents/cadpr-mix.csv", col.names=,1)
+attach(cadpr)
+
+p<-ggplot(data=cadpr, aes(x=x, y=y)) +  geom_line(aes(colour=peak))  + ylim(0,15000) + xlim(0,6)  + theme(panel.grid.major = element_blank(), legend.key = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5)) + labs(x = "Retention Time (minutes)", y = "Intensity (counts)")
+
+
+pdf(file = "/Users/hulin/Documents/metabolomics-mix3.pdf",width=5,height=3)
+p   + scale_x_continuous(limits = c(0,6), breaks=c(0,1,2,3,4,5,6))
+dev.off()
+
