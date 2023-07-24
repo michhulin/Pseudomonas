@@ -1,0 +1,30 @@
+# Effector trees
+
+library(phangorn)
+library(ggnewscale)
+library(ggtree)
+library(phytools)
+library(ggplot2)
+tree <- read.tree("/Users/hulin/Documents/Bioinformatics/effector_contree/OG0009885_new.fasta.contree")
+tree2<-midpoint.root(tree)
+
+mydata <- read.csv("/Users/hulin/Documents/R tables/OG0009885_pa3", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+effector<-mydata[c(1)]
+prom<-mydata[c(2)]
+cpg<-mydata[c(3)]
+
+q<-ggtree(tree2)
+d <- q$data
+d <- d[!d$isTip,]
+d$label <- as.numeric(d$label)
+
+
+qa <- q +  geom_text2(data=d, aes(label=label),size=2,hjust=-0.2) + geom_tiplab(size=0.5,hjust=-0.05)
+q2 <- gheatmap(qa, cpg, width=0.02, font.size=0.5 , color = "white",  offset=0.05) + scale_fill_manual(values=c("red"))
+q3 <- q2 + new_scale_fill()
+q4 <- gheatmap(q3, effector, width=0.02, font.size=0.5 , color = "white",  offset=0.1) + scale_fill_manual(values=c("deepskyblue"))
+q5 <- q4 + new_scale_fill()
+q6 <- gheatmap(q5, prom, width=0.02, font.size=0.5 , color = "white",  offset=0.15) + scale_fill_manual(values=c("white","orange"))
+pdf(file = "/Users/hulin/Documents/9885_tree.pdf",width=5,height=7)
+q6+theme(legend.position="bottom", legend.title=element_blank()) + guides(colour=FALSE) + geom_treescale(offset=2)
+dev.off()
