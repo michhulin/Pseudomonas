@@ -1,0 +1,144 @@
+
+nad<-read.csv("/Users/hulin/Documents/R tables/nad_depletion_int_exp12.csv", col.names=,1)
+attach(nad)
+library(ggplot2)
+library(plyr)
+library(agricolae)
+
+
+a <- ggplot(nad, aes(x=day, y=nmol.g)) + geom_point()
+a <- ggplot(nad, aes(x=day, y=nmol.g)) + geom_boxplot() + geom_point(position = position_jitter(width = 0.05),aes(x=day,y=nmol.g,color=exp)) + scale_colour_manual(values=c("blue","red","orange"))
+pdf(file = "/Users/hulin/Documents/nad_dep_int_day_nmol.pdf",width=3,height=5)
+a + facet_wrap(~strain, ncol=1)
+dev.off()
+
+
+
+am=subset(nad, strain=="zAM1")
+by=subset(nad, strain=="BY")
+ev=subset(nad, strain=="1-ev")
+
+am=subset(nad, strain=="AM1")
+by=subset(nad, strain=="BY")
+ev=subset(nad, strain=="ev")
+
+
+# Subset weight data before treatment
+A <- subset(am,  day == "A", nad, drop = TRUE)
+# subset weight data after treatment
+B <- subset(am,  day == "B", nad, drop = TRUE)
+res <- wilcox.test(A, B, paired = TRUE)
+
+data:  A and B
+V = 40, p-value = 0.03906
+alternative hypothesis: true location shift is not equal to 0
+
+A <- subset(by,  day == "A", nad, drop = TRUE)
+# subset weight data after treatment
+B <- subset(by,  day == "B", nad, drop = TRUE)
+res <- wilcox.test(A, B, paired = TRUE)
+
+data:  A and B
+V = 43, p-value = 0.01172
+alternative hypothesis: true location shift is not equal to 0
+
+A <- subset(ev,  day == "A", nad, drop = TRUE)
+# subset weight data after treatment
+B <- subset(ev,  day == "B", nad, drop = TRUE)
+res <- wilcox.test(A, B, paired = TRUE)
+
+Wilcoxon signed rank exact test
+
+
+data:  A and B
+V = 27, p-value = 0.6523
+alternative hypothesis: true location shift is not equal to 0
+
+
+nad<-read.csv("/Users/hulin/Documents/R tables/nad_depletion_int2.csv", col.names=,1)
+attach(nad)
+library(ggplot2)
+library(plyr)
+library(agricolae)
+
+
+am=subset(nad, strain=="zAM1")
+by=subset(nad, strain=="BY")
+ev=subset(nad, strain=="1-ev")
+
+AM1
+data:  A and B
+V = 21, p-value = 0.03125
+alternative hypothesis: true location shift is not equal to 0
+
+
+BY
+	Wilcoxon signed rank exact test
+
+data:  A and B
+V = 20, p-value = 0.0625
+alternative hypothesis: true location shift is not equal to 0
+
+
+EV
+Wilcoxon signed rank exact test
+
+data:  A and B
+V = 11, p-value = 1
+alternative hypothesis: true location shift is not equal to 0
+
+# Experiments 1 and 3
+
+zAM1
+Wilcoxon signed rank exact test
+
+data:  A and B
+V = 18, p-value = 0.1563
+alternative hypothesis: true location shift is not equal to 0
+
+BY
+data:  A and B
+V = 21, p-value = 0.03125
+alternative hypothesis: true location shift is not equal to 0
+
+EV
+
+data:  A and B
+V = 17, p-value = 0.2188
+alternative hypothesis: true location shift is not equal to 0
+
+
+Paired t-test
+
+HopBY
+
+data:  by$nad by by$day
+t = 3.3075, df = 5, p-value = 0.0213
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+0.124656 0.994344
+sample estimates:
+mean of the differences
+               0.5595
+
+EV
+               data:  ev$nad by ev$day
+t = 1.679, df = 5, p-value = 0.154
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ -0.1582314  0.7542314
+sample estimates:
+mean of the differences
+                  0.298
+
+HopAM1
+                  Paired t-test
+
+data:  am$nad by am$day
+t = 1.5757, df = 5, p-value = 0.1759
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+-0.2089635  0.8708302
+sample estimates:
+mean of the differences
+            0.3309333
