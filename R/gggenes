@@ -1,0 +1,28 @@
+# Export the information of annotations from the region surrounding all 18056 homologs from Geneious into a table separated file. Process this for input into the gggenes program 
+# In /tsl/scratch/hulin/pseudomonas/analysis/effectors/18056/gggenes
+
+
+cut -f1,9,4,5 all | sed s/"Name="//g > all2
+cut -f7 all | sed s/"+"/"1"/g | sed s/"-"/"-1"/g > all3
+paste all2 all3 > all.txt
+grep -v "#" all.txt > all.txt2
+awk 'BEGIN {FS="\t"; OFS=","} {print $1, $4, $2, $3, $5}' all.txt2 > all.txt3
+
+
+# gggenes in R 
+
+library(ggplot2)
+library(gggenes)
+
+
+genes <- read.csv("/Users/hulin/Desktop/Pcor_ICMP_4457.csv", stringsAsFactors=FALSE, colClasses='character')
+genes$start<-as.numeric(genes$start)
+genes$end<-as.numeric(genes$end)
+genes$orientation<-as.numeric(genes$orientation)
+
+p<- ggplot(genes, aes(xmin = start, xmax = end, y = molecule, fill = colour, forward = orientation), axis.text.x = element_text(angle=90, hjust=1) ) + geom_gene_arrow() + theme(legend.position="none") + scale_fill_identity()
+
+
+pdf(file = "/Users/hulin/Documents/gene3.pdf",width=7,height=10)
+p +   theme_genes()
+dev.off()
