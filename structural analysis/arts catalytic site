@@ -1,0 +1,165 @@
+# ART catalytic site analysis
+# /tsl/scratch/hulin/pseudomonas/analysis/ARTs/hhr/pdb
+
+# Structural alignment to cholera toxin
+for file1 in *.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+
+sbatch /tsl/scratch/hulin/scripts/sub_frtmalign.sh  1s5e.pdb $file1 1s5e
+
+for file in *aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+ls $file > "$file_short"_key_residues
+grep "1CA  ARG     7" $file  >> "$file_short"_key_residues
+grep "1CA  SER    61" $file  >> "$file_short"_key_residues
+grep "1CA  THR    62" $file  >> "$file_short"_key_residues
+grep "1CA  SER    63" $file  >> "$file_short"_key_residues
+grep "1CA  GLU   110" $file  >> "$file_short"_key_residues
+grep "1CA  GLN   111" $file  >> "$file_short"_key_residues
+grep "1CA  GLU   112" $file  >> "$file_short"_key_residues
+
+sed s/".pdb_aligned_residues"//g  "$file_short"_key_residues  | sed s/"SARM1_TIR\.pdb_"//g > "$file_short"_key_residues2
+tr "\n" "\t" < "$file_short"_key_residues2 > "$file_short"_key_residues
+sed -i '' -e '$a\' "$file_short"_key_residues
+rm "$file_short"_key_residues2
+
+
+## Get key residue region (catalytic residues based on alignment to cholera toxin)
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/ARTs/hhr/pdb
+for file1 in $workdir/*.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+
+sed 's/ \+ /\t/g' 1s5e.pdb_"$file_short".pdb_aligned_residues  > "$file_short"_1
+sed s/"\s"/"\t"/g "$file_short"_1 > "$file_short"_2
+sed -i '1i\\'  "$file_short"_2
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]7' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]61' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]THR[[:blank:]]62' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]63' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]110' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLN[[:blank:]]111' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]112' 	|| printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+cut -f12 "$file_short"_3 | sed s/"\/"//g | tr '\n' ' ' | sed s/" "//g > "$file_short"_4
+
+sed 's/ALA/A/g;s/CYS/C/g;s/ASP/D/g;s/GLU/E/g;s/PHE/F/g;s/GLY/G/g;s/HIS/H/g;s/HID/H/g;s/HIE/H/g;s/ILE/I/g;s/LYS/K/g;s/LEU/L/g;s/MET/M/g;s/ASN/N/g;s/PRO/P/g;s/GLN/Q/g;s/ARG/R/g;s/SER/S/g;s/THR/T/g;s/VAL/V/g;s/TRP/W/g;s/TYR/Y/g;s/MSE/X/g' < "$file_short"_4 > "$file_short"_5
+
+
+for file in *_5 ; do
+file_name=$(basename $file | sed s/"_5"//g )
+awk '
+  function basename(file) {
+    sub(".*/", "", file)
+    return file
+  }
+{ print ">"basename(FILENAME) "\n" $0  } ' $file | sed s/"_5"//g > "$file_name".fasta
+
+
+
+
+## Script all vs. all structural alignments for similarity dendrogram
+
+for file1 in *.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+for file2 in *.pdb ; do
+file_short2=$(basename $file2 | sed s/".pdb"//g)
+echo $file_short2
+Jobs=$(squeue | grep 'fr' | wc -l)
+while [ $Jobs -gt 20 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'fr' | wc -l)
+done
+sbatch /tsl/scratch/hulin/scripts/sub_frtmalign.sh  $file1 $file2 out2
+
+
+# OR line by line
+for file in *_TMscore ; do
+file_short=$(basename $file | sed s/".pdb_TMscore"//g)
+
+cut -f2 -d ";" $file | sed s/" RMSD =  "//g > "$file_short".rm
+awk ' { print FILENAME "\t" $0  } ' "$file_short".rm > "$file_short".rm2
+sed -i s/"\.pdb_"/"\t"/g "$file_short".rm2
+sed -i s/"\.rm"//g "$file_short".rm2
+done
+
+for file in *_TMscore ; do
+file_short=$(basename $file | sed s/".pdb_TMscore"//g)
+
+cut -f1 -d ";" $file | sed s/" Aligned length=  "//g > "$file_short".am
+awk ' { print FILENAME "\t" $0  } ' "$file_short".am > "$file_short".am2
+sed -i s/"\.pdb_"/"\t"/g "$file_short".am2
+sed -i s/"\.am"//g "$file_short".am2
+done
+
+
+# Put this information into a csv file and load the RMSD values into R and create a dendrogram
+
+rmsd <- read.csv("/Users/hulin/Documents/R tables/rmsd_art_new.csv", row.names=,1)
+d<-as.dist(xtabs(rmsd[, 5] ~ rmsd[, 2] + rmsd[, 1]))
+write.table(as.matrix(d),"artrmsd1.txt")
+d<-hclust(d)
+distances<-cophenetic(d)
+dend <- as.dendrogram(d)
+pdf(file = "/Users/hulin/Documents/art_RMSD4.pdf",width=12,height=6)
+par(cex=1,cex.axis=15)
+plot(dend)
+dev.off()
+
+# Create a plot of the ART catalytic residues imposed onto the dendrogram of similarity
+
+data4=tidy_msa("/Users/hulin/Documents/Bioinformatics/art_as.fasta")
+
+q<-ggtree(dend)
+q2<- q  + geom_tiplab(size=0.5) + geom_tree(size=0.01)
+
+q3<-q2 + geom_facet(geom = geom_msa, data = data4,  panel = 'msa',
+               font = NULL, color = "Chemistry_AA") +
+    xlim_tree(2)
+pdf(file = "/Users/hulin/Documents/ARTs_rmsd_activesite.pdf",width=4,height=10)
+q3
+dev.off()
+
+
+# PROMALS
+# /tsl/scratch/hulin/pseudomonas/analysis/ARTs/hhr/pdb/new/promals
+​source biopython-1.79
+for file in ../1g24_2.pdb ; do
+file_short=$(basename $file | sed s/".pdb"//g)
+python3 ../pdbfasta.py $file > "$file_short".fasta
+
+for file in *.fasta ; do
+file_short=$(basename $file | sed s/"_2.fasta"//g)
+tail -n+2 $file > "$file_short"_2
+awk -v filename="$(basename "$file_short"_2)" 'BEGIN {print ">"filename} {print}' "$file_short"_2 | sed s/".fasta"//g | sed s/"_2"//g > "$file_short".fa
+
+## Promals
+source promals-1.0
+source gcc-5.2.0
+promals promals.fa > input_file.log
+python promals promals.fa > input_file.log
+
+sbatch /tsl/scratch/hulin/scripts/sub_promals.sh promals.fa logfile
+
+# Just domain
+# /tsl/scratch/hulin/pseudomonas/analysis/ARTs/hhr/pdb/domain/promals
+source samtools-1.9
+
+for file in *fa ; do
+file_short=$(basename $file | sed s/".fasta"//g | sed s/".fa"//g)
+echo $file_short
+s=$(cut -f1 -d "-" ../"$file_short".output)
+e=$(cut -f2 -d "-" ../"$file_short".output)
+echo $s
+samtools faidx $file "$file_short":"$s"-"$e" > "$file_short".do.fa
