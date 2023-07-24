@@ -1,0 +1,261 @@
+#################################################################
+
+# T3SS gene cluster identification
+
+#################################################################
+
+# Proteins used for this analysis were taken from the Pto DC3000 genome
+
+prot_AAO54900.1_9
+prot_AAO54901.1_10
+prot_AAO54902.1_11
+prot_AAO54903.1_12
+prot_AAO54904.1_13
+prot_AAO54905.1_14
+prot_AAO54906.1_15
+prot_AAO54907.1_16
+prot_AAO54908.1_17
+prot_AAO54909.1_18
+prot_AAO54910.1_19
+prot_AAO54911.2_20
+prot_AAO54912.1_21
+prot_AAO54913.1_22
+prot_AAO54926.1_23
+prot_AAO54927.1_24
+
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/T3SS/viridiflava
+gendir=/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/
+
+
+for GENOME in $gendir/*.fna ; do
+     GENOME_FILE=$(basename $GENOME)
+     GENOME_SHORT=$(echo $GENOME_FILE | sed s/.fna//g | cut -f1 -d ".")
+     echo $GENOME_SHORT
+
+    Jobs=$(squeue | grep 'sub_tbla' | wc -l)
+    while [ $Jobs -gt 50 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_tbla' | wc -l)
+    done
+
+sbatch /tsl/scratch/hulin/scripts/sub_tblastn.sh  $GENOME $workdir/viridiflava.t3ss.fasta  out pergenome
+
+done
+
+# Filter based on 50% QL and 30% ID
+# Do for each genome
+for file in *txt2 ; do
+file_name=$(basename $file)
+echo $file_name
+
+python /tsl/scratch/hulin/scripts/filter_blast_hrp1.py $file "$file_name"_out
+
+for output in *_out ; do
+out_name=$(basename $output | sed s/".hits.txt2_out"//g)
+echo $out_name
+for file in $(cat /tsl/scratch/hulin/pseudomonas/analysis/T3SS/viridiflava_accessions) ; do
+grep $file $output | sort -nrk2 | head -n 1 >> "$out_name"_out2
+done
+
+
+# Then give an overall score based on gene scores in cluster. 0 or 1 present (0) if all genes present and above thresholds (2)
+for file in *out2 ; do
+file_name=$(basename $file | sed s/"_out2"//g)
+echo $file_name
+cut -f2  $file  | sort | uniq | head -1 | sed s/"1"/"0"/g | sed s/"2"/"1"/g > ./out/"$file_name"_output
+done
+
+
+cat *output > output2
+ls *output > names
+paste names output2 > viridiflava_out
+
+
+sed -i s/"_dc3000.t3ss_output"//g dc3000_out
+sed -i s/"GCA_"//g dc3000_out
+
+sed -i s/"_B728A.t3ss_output"//g b728a_out
+sed -i s/"GCA_"//g b728a_out
+
+sed -i s/"_viridiflava.t3ss_output"//g viridiflava_out
+sed -i s/"GCA_"//g viridiflava_out
+
+
+
+# In /tsl/scratch/hulin/pseudomonas
+python /tsl/scratch/hulin/scripts/filter_dict.py genomes_531 t3ss_30 > t3ss_30_out
+sed -i '/^$/d' t3ss_30_out
+
+
+# Add file name
+
+for filename in *_output ; do
+echo $filename
+sed "1s/^/${filename} \n/" ${filename} > $filename.new
+
+
+sed -i s/"_dc3000.t3ss_output"//g
+
+
+paste *.new > matrix
+
+paste protein_list matrix > matrix2
+
+
+#################################################################
+
+# Toxin gene cluster identification
+
+#################################################################
+
+
+workdir=/tsl/scratch/hulin/pseudomonas/analysis/toxins
+gendir=/tsl/data/sequences/bacteria/pseudomonas/ncbi-genomes-2020-11-18/531
+
+
+for GENOME in $gendir/*.fna ; do
+     GENOME_FILE=$(basename $GENOME)
+     GENOME_SHORT=$(echo $GENOME_FILE | sed s/.fna//g)
+     echo $GENOME_SHORT
+
+    Jobs=$(squeue | grep 'sub_tbla' | wc -l)
+    while [ $Jobs -gt 50 ]
+    do
+        srun sleep 10
+        printf "."
+        Jobs=$(squeue | grep 'sub_tbla' | wc -l)
+    done
+
+sbatch /tsl/scratch/hulin/scripts/sub_tblastn.sh  $GENOME $workdir/syp.fasta  out_sp pergenome_sp
+
+done
+
+
+# syringolin A
+
+gi|443283856|gb|ELS42861.1|
+gi|443284786|gb|ELS43791.1|
+gi|443284787|gb|ELS43792.1|
+gi|443284788|gb|ELS43793.1|
+gi|443284789|gb|ELS43794.1|
+gi|443284790|gb|ELS43795.1|
+
+# syringomycin
+
+gi|514086078|gb|EPF66813.1|
+gi|514086077|gb|EPF66812.1|
+gi|514086076|gb|EPF66811.1|
+gi|514086069|gb|EPF66804.1|
+gi|514085364|gb|EPF66099.1|
+gi|514086067|gb|EPF66802.1|
+gi|514086066|gb|EPF66801.1|
+gi|514086065|gb|EPF66800.1|
+gi|3510629|gb|AAC80285.1|
+gi|514086064|gb|EPF66799.1|
+gi|514086063|gb|EPF66798.1|
+gi|514086061|gb|EPF66796.1|
+gi|514086060|gb|EPF66795.1|
+gi|514086059|gb|EPF66794.1|
+
+# syringopeptin
+
+gi|514086070|gb|EPF66805.1|
+gi|514086071|gb|EPF66806.1|
+gi|514086072|gb|EPF66807.1|
+
+
+# Filter based on 50% QL and 30% ID
+# Do for each genome
+for file in *txt2 ; do
+file_name=$(basename $file)
+echo $file_name
+
+python /tsl/scratch/hulin/scripts/filter_blast_hrp2.py $file "$file_name"_out
+
+for output in *_out ; do
+out_name=$(basename $output | sed s/".hits.txt2_out"//g)
+echo $out_name
+for file in $(cat /tsl/scratch/hulin/pseudomonas/analysis/toxins/sym_acc2) ; do
+grep $file $output | sort -nrk2 | head -n 1 >> "$out_name"_out2
+done
+
+
+# Then give an overall score based on gene scores in cluster. 0 or 1 present (0) if all genes present and above thresholds (2)
+for file in *out2 ; do
+file_name=$(basename $file | sed s/"_out2"//g)
+echo $file_name
+cut -f2  $file  | sort | uniq | head -1 | sed s/"1"/"0"/g | sed s/"2"/"1"/g > ./out/"$file_name"_output
+done
+
+
+cat *output > output2
+ls *output > names
+paste names output2 > sym_out
+
+
+
+
+# Add file name
+
+for filename in *_output ; do
+echo $filename
+sed "1s/^/${filename} \n/" ${filename} > $filename.new
+
+
+sed -i s/"_dc3000.t3ss_output"//g
+
+
+paste *.new > matrix
+
+paste protein_list matrix > matrix2
+
+
+
+
+
+# Do for each toxin e.g.
+for file in *phas ; do
+file_name=$(basename $file)
+echo $file_name
+
+python /projects/oldhome/hulinm/git_repos/tools/analysis/python_effector_scripts/filter_blast_hrp.py $file ./output/"$file_name"_out
+
+
+# Then give an overall score based on gene scores in cluster. 0 or 1 present (0) if all genes present and above thresholds (2)
+# Then filter this down further to give overall score of 1 if all genes are present
+
+for file in *out ; do
+file_name=$(basename $file | sed s/"_out"//g)
+echo $file_name
+cut -f2  $file  | sort | uniq | head -1 | sed s/"1"/"0"/g | sed s/"2"/"1"/g > "$file_name"_out2
+done
+
+
+# Concatenate for each genome
+for file in *out2 ; do
+file_name=$(basename $file | sed s/"_out2"//g | sed s/"_sym"//g | sed s/"_syl"//g | sed s/"_syp"//g | sed s/"_cor"//g | sed s/"_tab"//g  | sed s/"_mg"//g )
+echo $file_name >> genomes
+
+
+uniq genomes > genome
+
+for file in $(cat genome) ; do
+echo $file
+cat "$file"*_out2 > "$file"_all
+done
+
+
+# Add file name
+
+for filename in *_all ; do
+echo $filename
+	sed "1s/^/${filename} \n/" ${filename} > $filename.new
+	echo Done ${filename}
+done
+
+paste *all.new > matrix
+
+# This matrix was then manually added onto the end of the effector presence-absence file in excel
