@@ -1,0 +1,349 @@
+#/mnt/scratch/hulinmic/tirs
+#Araport11_pep_20220914
+#https://www.arabidopsis.org/download/list?dir=Sequences%2FAraport11_blastsets
+#TIR list from CHM paper
+
+# unwrap the fasta
+awk '!/^>/ { printf "%s", $0; n = "\n" }
+/^>/ { print n $0; n = "" }
+END { printf "%s", n }
+' Araport11_pep_20220914 > proteome.fasta
+
+# Get the TIRs
+for file in $(cat col0-tirs) ; do
+echo $file
+grep -i -A1 $file proteome.fasta >> tirs.fasta
+
+cut -f1 -d " " tirs.fasta  > tirs2.fasta
+
+sed s/"\*"//g tirs2.fasta > tirs3.fasta
+
+awk 'BEGIN{RS=">";FS="\n"} NR>1{fnme=$1".fasta"; print ">" $0 > fnme; close(fnme);}' tirs3.fasta
+
+# Run interproscan
+
+for file in *.fasta ; do
+echo $file
+Jobs=$(squeue | grep 'sub_int' | wc -l)
+while [ $Jobs -gt 50 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'sub_int' | wc -l)
+done
+sbatch /mnt/home/hulinmic/scripts/sub_inter.sh $file
+
+
+# Get the longest non-overlapping hit to TIR domain in each protein. Using python to extract this
+for file in *tsv ; do
+name=$(basename $file | sed s/".fasta.tsv"//g)
+grep TIR $file | grep domain | cut -f7,8 > "$name"_TIR
+python /mnt/home/hulinmic/scripts/merge.py "$name"_TIR > "$name"_TIRs
+sed s/"\[("//g "$name"_TIRs | sed s/")\]"//g | sed s/"), ("/"\n"/g | sed s/" "//g | sed s/","/"\t"/g > "$name"_TIR
+
+rm *TIRs
+
+# Split multi-TIRs (where you have more than one TIR domain in a protein)
+for file in *TIR ; do
+bash /mnt/home/hulinmic/scripts/split.sh $file
+
+# Remove original file when more than one to only keep the individual TIR domains
+for file in *TIR.1* ; do
+name=$(basename $file | sed s/"_TIR.1"//g)
+rm "$name"_TIR
+done
+
+# Extract TIR domain region from fasta files and put into seperate file
+for file in *TIR* ; do
+name1=$(basename $file)
+name=$(basename $file | sed s/"_TIR.1"//g | sed s/"_TIR.2"//g | sed s/"_TIR"//g)
+echo $name
+start=$(cut -f1 $file)
+end=$(cut -f2 $file)
+echo $start
+echo $end
+bash  /mnt/home/hulinmic/scripts/extract_fasta_region.sh  "$name".fasta ./tir_fasta/"$name1".fasta $start $end $file
+
+
+# Get the files with sequences in
+for file in * ; do  awk 'NR==2 && /[a-zA-Z]/ {print FILENAME; nextfile}' $file >> have_tir
+
+for file in $(cat have_tir) ; do  cp $file seq; done
+
+
+
+# Alignment and phylogeny
+# HK subsetted the list of TIRs
+# /mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq/phylogeny
+
+sbatch /mnt/home/hulinmic/scripts/sub_clustal2.sh  tirs.fasta
+
+trimal -in tirs.fasta -out trimmed.fasta -automated1
+
+# phylogeny
+sbatch /mnt/home/hulinmic/scripts/sub_iqtree-no.sh trimmed.fasta
+
+
+
+
+# Alphafold2
+
+# Function to check the number of jobs
+check_jobs() {
+    squeue -u $USER | tail -n +2 | wc -l
+}
+
+# Loop through each .fasta file in the folder
+for todo in $(cat todo) ; do
+for fasta_file in /mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq/"$todo".fasta; do
+    # Get the filename without extension
+    filename=$(basename -- "$fasta_file")
+    filename_no_ext="${filename%.*}"
+    echo "Processing $filename_no_ext"
+
+    # Check if a folder with the same name exists
+    output_dir="/mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq/af/$filename_no_ext"
+    if [ -d "$output_dir" ]; then
+        echo "Directory $output_dir already exists. Skipping submission for $filename_no_ext."
+        continue
+    fi
+
+    Jobs=$(check_jobs)
+
+    # Wait until the number of jobs is below the threshold
+    while [ $Jobs -ge 50 ]; do
+        echo "Waiting for jobs to reduce. Current jobs: $Jobs"
+        sleep 30  # Wait 30 seconds before checking again
+        Jobs=$(check_jobs)
+    done
+
+    # Submit SLURM job for the current .fasta file
+    sbatch alphafold.sb "$filename" "$filename_no_ext"
+    if [ $? -eq 0 ]; then
+        echo "Submitted SLURM job for $filename_no_ext"
+    else
+        echo "Failed to submit SLURM job for $filename_no_ext"
+        exit 1  # Exit if submission fails to prevent flooding
+    fi
+
+    # Adding a small delay between submissions to avoid hitting the submission limit
+    sleep 5
+done
+
+
+
+
+# Alignment with SARM1
+# https://www.rcsb.org/structure/8D0J (created monomer in pymol)
+# /mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq/af
+
+for todo in $(cat todo) ; do
+for file in "$todo"*fasta ; do
+echo $file
+file_short=$(basename $file | sed s/".fasta"//g)
+cp ./"$file_short"/"$file_short"/ranked_0.pdb ./af/"$file_short".pdb
+
+
+for todo in $(cat todo) ; do
+for file1 in "$todo"*.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+echo $file_short
+Jobs=$(squeue | grep 'fr' | wc -l)
+while [ $Jobs -gt 20 ]
+do
+    srun sleep 10
+    printf "."
+    Jobs=$(squeue | grep 'fr' | wc -l)
+done
+sbatch /mnt/home/hulinmic/scripts/sub_frtmalign.sh  sarm1_tir.pdb $file1 align
+
+
+
+for file in *aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+ls $file > "$file_short"_key_residues
+grep "1CA  GLU   642" $file  >> "$file_short"_key_residues
+sed s/".pdb_aligned_residues"//g  "$file_short"_key_residues  | sed s/"sarm1_tir\.pdb_"//g > "$file_short"_key_residues2
+tr "\n" "\t" < "$file_short"_key_residues2 > "$file_short"_key_residues
+sed -i '' -e '$a\' "$file_short"_key_residues
+rm "$file_short"_key_residues2
+
+
+
+# Alignment with Roq1
+# /mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq
+# https://www.rcsb.org/structure/7JLX
+
+for file1 in *.pdb ; do
+file_short=$(basename $file1 | sed s/".pdb"//g)
+
+sbatch /mnt/home/hulinmic/scripts/sub_frtmalign.sh roq1_tir.pdb $file1 align_roq1
+
+
+
+for file in *aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+ls $file > "$file_short"_key_residues
+grep "1CA  GLU    86" $file  >> "$file_short"_key_residues
+sed s/".pdb_aligned_residues"//g  "$file_short"_key_residues  | sed s/"roq1\.pdb_"//g > "$file_short"_key_residues2
+tr "\n" "\t" < "$file_short"_key_residues2 > "$file_short"_key_residues
+sed -i '' -e '$a\' "$file_short"_key_residues
+rm "$file_short"_key_residues2
+
+# The BB loop sequence of Roq1 is F(43)MDDKELKRGK(53)
+
+
+# Get BB-loop
+
+for file in  *_aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+
+sed 's/ \+ /\t/g' $file  > "$file_short"_1
+sed s/"\s"/"\t"/g "$file_short"_1 > "$file_short"_2
+sed -i '1i\\'  "$file_short"_2
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]43' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]MET[[:blank:]]44' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]45' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]46' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]47' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]48' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]49' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]50' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]51' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]52' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]53' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+
+cut -f12 "$file_short"_3 | sed s/"\/"//g | tr '\n' ' ' | sed s/" "//g > "$file_short"_4
+
+sed 's/ALA/A/g;s/CYS/C/g;s/ASP/D/g;s/GLU/E/g;s/PHE/F/g;s/GLY/G/g;s/HIS/H/g;s/HID/H/g;s/HIE/H/g;s/ILE/I/g;s/LYS/K/g;s/LEU/L/g;s/MET/M/g;s/ASN/N/g;s/PRO/P/g;s/GLN/Q/g;s/ARG/R/g;s/SER/S/g;s/THR/T/g;s/VAL/V/g;s/TRP/W/g;s/TYR/Y/g;s/MSE/X/g' < "$file_short"_4 > "$file_short"_5
+
+
+for file in *_5 ; do
+file_name=$(basename $file | sed s/"_5"//g | sed s/"roq1_tir_"//g)
+awk '
+  function basename(file) {
+    sub(".*/", "", file)
+    return file
+  }
+{ print ">"basename(FILENAME) "\n" $0  } ' $file | sed s/"_5"//g > "$file_name"_bb.fasta
+
+for f in *_5; do (cat "${f}"; echo) >> bbseq
+
+
+
+## Longer
+
+
+# Get BB-loop
+# /mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq/af/align_roq1/bb
+
+for file in  *_aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+
+sed 's/ \+ /\t/g' $file  > "$file_short"_1
+sed s/"\s"/"\t"/g "$file_short"_1 > "$file_short"_2
+sed -i '1i\\'  "$file_short"_2
+
+
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]37' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]38' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]39' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]40' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]HIS[[:blank:]]41' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]THR[[:blank:]]42' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]PHE[[:blank:]]43' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]MET[[:blank:]]44' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]45' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]46' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]47' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]48' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LEU[[:blank:]]49' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]50' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ARG[[:blank:]]51' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLY[[:blank:]]52' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]LYS[[:blank:]]53' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]54' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]ILE[[:blank:]]55' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]56' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]SER[[:blank:]]57' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+while read line; do
+grep '1CA[[:blank:]]GLU[[:blank:]]58' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_3
+
+cut -f12 "$file_short"_3 | sed s/"\/"//g | tr '\n' ' ' | sed s/" "//g > "$file_short"_4
+
+sed 's/ALA/A/g;s/CYS/C/g;s/ASP/D/g;s/GLU/E/g;s/PHE/F/g;s/GLY/G/g;s/HIS/H/g;s/HID/H/g;s/HIE/H/g;s/ILE/I/g;s/LYS/K/g;s/LEU/L/g;s/MET/M/g;s/ASN/N/g;s/PRO/P/g;s/GLN/Q/g;s/ARG/R/g;s/SER/S/g;s/THR/T/g;s/VAL/V/g;s/TRP/W/g;s/TYR/Y/g;s/MSE/X/g' < "$file_short"_4 > "$file_short"_5
+
+
+for file in *_5 ; do
+file_name=$(basename $file | sed s/"_5"//g | sed s/"roq1_tir_"//g)
+awk '
+  function basename(file) {
+    sub(".*/", "", file)
+    return file
+  }
+{ print ">"basename(FILENAME) "\n" $0  } ' $file | sed s/"_5"//g > "$file_name"_bb.fasta
+
+for f in *_5; do (cat "${f}"; echo) >> bbseq
+
+
+
+# Get BB-loop D
+# /mnt/scratch/hulinmic/tirs/fasta/tir_fasta/seq/af/align_roq1/bb
+
+for file in  *_aligned_residues; do
+file_short=$(basename $file | sed s/"_aligned_residues"//g)
+echo $file
+sed 's/ \+ /\t/g' $file  > "$file_short"_1
+sed s/"\s"/"\t"/g "$file_short"_1 > "$file_short"_2
+sed -i '1i\\'  "$file_short"_2
+
+while read line; do
+grep '1CA[[:blank:]]ASP[[:blank:]]45' || printf "/-\n" ; done < "$file_short"_2 >> "$file_short"_D
+
+cut -f12 "$file_short"_D | sed s/"\/"//g | tr '\n' ' ' | sed s/" "//g > "$file_short"_D1
+
+sed 's/ALA/A/g;s/CYS/C/g;s/ASP/D/g;s/GLU/E/g;s/PHE/F/g;s/GLY/G/g;s/HIS/H/g;s/HID/H/g;s/HIE/H/g;s/ILE/I/g;s/LYS/K/g;s/LEU/L/g;s/MET/M/g;s/ASN/N/g;s/PRO/P/g;s/GLN/Q/g;s/ARG/R/g;s/SER/S/g;s/THR/T/g;s/VAL/V/g;s/TRP/W/g;s/TYR/Y/g;s/MSE/X/g' < "$file_short"_D1 > "$file_short"_D2
+
+
+for file in *_D2 ; do
+file_name=$(basename $file | sed s/"_5"//g | sed s/"roq1_tir_"//g)
+awk '
+  function basename(file) {
+    sub(".*/", "", file)
+    return file
+  }
+{ print ">"basename(FILENAME) "\n" $0  } ' $file | sed s/"_5"//g > "$file_name"_bb-D.fasta
+
+for f in *_bb-D; do (cat "${f}"; echo) >> bbseqD
