@@ -1,0 +1,66 @@
+library(ape)
+library(ggplot2)
+library(ggtree)
+library(phangorn)
+library(TDbook)
+library(ggmsa)
+library(ggnewscale)
+
+tree <- read.tree("/Users/hulinmic/Documents/Bioinformatics results/col0_tirs.tre")
+tree <- read.tree("/Users/hulinmic/Documents/Bioinformatics results/col0_trimmed.tre")
+
+
+tir <- read.csv("/Users/hulinmic/Documents/R tables/col0-tirs.csv", stringsAsFactors=FALSE, colClasses='character',  row.names = 1)
+tir2 <- read.csv("/Users/hulinmic/Documents/R tables/col0-tirs.csv", stringsAsFactors=FALSE, colClasses='character')
+
+data2=tidy_msa("/Users/hulinmic/Documents/Bioinformatics results/bb.fasta")
+
+e<-tir[c(3)]
+D<-tir[c(5)]
+
+# Adding in root
+outgroup <- match(c("AT5G56220.1_TIR","AT4G23440.1_TIR"),tree$tip.label)
+t<-root(tree,outgroup, node=NULL, resolve.root=TRUE)
+
+
+
+
+q<-ggtree(t)
+d <- q$data
+d <- d[!d$isTip,]
+d$label <- as.numeric(d$label)
+d <- d[d$label < 100,]
+
+# New
+
+
+
+x <- c(rep(NA,152),as.numeric(t$node.label))
+col <- cut(x, breaks=c(0,50,100))
+col <- factor(col, levels=rev(levels(col)))
+col <- factor(col, labels=c("51-99%","0-50%"))
+
+qa<- q + geom_nodepoint(aes(color=col, subset=!is.na(as.numeric(label)) & as.numeric(label) < 100), alpha=2, size=0.5, show.legend = TRUE) + scale_color_manual(values=c("gold","purple"))
+qb <- qa  + new_scale_color()
+
+q2<-qb %<+% tir2 + geom_tippoint(aes(color = factor(role))) + scale_color_manual(values=c("deepskyblue","red", "gray"))
+
+q3<-gheatmap(q2,e,width=0.05, font.size=0.5 , color = "white", offset=01) + scale_fill_manual(values=c("white","khaki1","khaki1","black","khaki1","khaki1","khaki1","khaki1","khaki1","khaki1"))
+
+q4 <- q3 + new_scale_fill()
+
+q5<-gheatmap(q4,D,width=0.05, font.size=0.5 , color = "white", offset=01) + scale_fill_manual(values=c("darkred","grey"))
+
+q5<-q4 + geom_facet(geom = geom_msa, data = data2,  panel = 'msa',
+               font = NULL, color = "Chemistry_AA") +
+    xlim_tree(2)
+
+q5 + geom_tiplab(size=1, offset=0.1)
+
+
+
+# For the legend
+
+aa=tidy_msa("/Users/hulinmic/Documents/aa.fasta")
+
+ggplot() + geom_msa(data = aa, font = NULL, color = "Chemistry_AA", show.legend = "TRUE") + coord_fixed()
